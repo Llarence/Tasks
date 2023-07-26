@@ -1,6 +1,6 @@
 package me.llarence.android
 
-import me.llarence.common.App
+import me.llarence.common.app
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -11,7 +11,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                App()
+                app()
             }
         }
     }
