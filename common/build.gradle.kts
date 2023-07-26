@@ -1,4 +1,5 @@
 import org.jetbrains.compose.compose
+import org.jetbrains.kotlin.ir.backend.js.compile
 
 plugins {
     kotlin("multiplatform")
@@ -20,6 +21,9 @@ kotlin {
                 api(compose.runtime)
                 api(compose.foundation)
                 api(compose.material)
+
+                implementation("com.google.firebase:firebase-admin:8.1.0")
+                implementation("org.slf4j:slf4j-simple:1.7.30")
             }
         }
         val commonTest by getting {

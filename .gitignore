@@ -40,3 +40,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+/common/src/androidMain/resources/secrets/**
+/desktop/src/jvmMain/resources/secrets/**
