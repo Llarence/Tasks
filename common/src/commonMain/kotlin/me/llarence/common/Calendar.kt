@@ -27,18 +27,19 @@ operator fun Color.times(value: Float): Color {
 
 // TODO: Show events covered by other events
 // TODO: Move some of the repeated math into functions
+// The last event is always the selected one
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier: Modifier = Modifier) {
+fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier: Modifier = Modifier, grabbedDelegate: MutableState<Boolean> = mutableStateOf(false)) {
     val textMeasurer = rememberTextMeasurer()
 
-    var scroll by mutableStateOf(Float.POSITIVE_INFINITY)
+    var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
 
-    var textBuffer by mutableStateOf(0f)
-    var daySize by mutableStateOf(0f)
+    var textBuffer by remember { mutableStateOf(0f) }
+    var daySize by remember { mutableStateOf(0f) }
 
-    var grabbedEvent by mutableStateOf(false)
-    var grabbedOffset by mutableStateOf(0f)
+    var grabbedEvent by grabbedDelegate
+    var grabbedOffset by remember { mutableStateOf(0f) }
 
     Canvas(
         modifier
