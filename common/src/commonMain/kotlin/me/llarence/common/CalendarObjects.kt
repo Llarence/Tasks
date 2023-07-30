@@ -1,7 +1,8 @@
 package me.llarence.common
 
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+
+// TODO: Look into improving createWithNew functions by not making these object immutable to decrease ram usage
 
 abstract class CalendarObject(val color: Color, val corners: Float) {
     abstract val time: Time
@@ -39,6 +40,6 @@ class CalendarTask(val task: Task, color: Color) : CalendarObject(color, 0f) {
     }
 
     override fun createWithNewTime(newTime: Time): CalendarTask {
-        return CalendarTask(Task(task.duration, task.locations, task.requirements, newTime), color)
+        return CalendarTask(Task(task.duration, task.locations, task.requirements, newTime, task.event), color)
     }
 }

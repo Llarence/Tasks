@@ -155,7 +155,12 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
                 calendarObject.color
             }
 
-            drawRoundRect(color, Offset(textBuffer + ((daySize + DAY_PADDING) * (calendarObject.time.date.get(Calendar.DAY_OF_WEEK) - 1)), (HOUR_SIZE * calendarObject.time.hour).dp.toPx() + scroll), Size(daySize, (calendarObject.duration * HOUR_SIZE).dp.toPx()), CornerRadius(calendarObject.corners.dp.toPx()))
+            val x = textBuffer + ((daySize + DAY_PADDING) * (calendarObject.time.date.get(Calendar.DAY_OF_WEEK) - 1))
+            val y = (HOUR_SIZE * calendarObject.time.hour).dp.toPx() + scroll
+            val width = daySize
+            val height = (calendarObject.duration * HOUR_SIZE).dp.toPx()
+
+            drawRoundRect(color, Offset(x, y), Size(width, height), CornerRadius(calendarObject.corners.dp.toPx()))
         }
     }
 }
