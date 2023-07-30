@@ -25,12 +25,12 @@ operator fun Color.times(value: Float): Color {
     return Color(red * value, green * value, blue * value)
 }
 
-// TODO: Show events covered by other events
+// TODO: Show calendarObjects covered by other calendarObjects
 // TODO: Move some of the repeated math into functions
 // The last event is always the selected one
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier: Modifier = Modifier, grabbedDelegate: MutableState<Boolean> = mutableStateOf(false)) {
+fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: Calendar, modifier: Modifier = Modifier, grabbedDelegate: MutableState<Boolean> = mutableStateOf(false)) {
     val textMeasurer = rememberTextMeasurer()
 
     var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
@@ -38,7 +38,7 @@ fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier:
     var textBuffer by remember { mutableStateOf(0f) }
     var daySize by remember { mutableStateOf(0f) }
 
-    var grabbedEvent by grabbedDelegate
+    var grabbed by grabbedDelegate
     var grabbedOffset by remember { mutableStateOf(0f) }
 
     Canvas(
@@ -47,7 +47,7 @@ fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier:
         .scrollable(
             orientation = Orientation.Vertical,
             state = rememberScrollableState { delta ->
-                scroll += delta
+                scroll += delta * SCROLL_SPEED
                 delta
             }
         )
@@ -60,25 +60,25 @@ fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier:
         .pointerInput(Unit) {
             detectDragGesturesAfterLongPress(
                 onDragStart = { startPos ->
-                    grabbedEvent = false
+                    grabbed = false
 
-                    for (i in (events.size - 1) downTo 0) {
-                        val event = events[i]
-                        if (!(event.time.date.get(Calendar.YEAR) == date.get(Calendar.YEAR) && event.time.date.get(Calendar.WEEK_OF_YEAR) == date.get(Calendar.WEEK_OF_YEAR))) {
+                    for (i in (calendarObjects.size - 1) downTo 0) {
+                        val calendarObject = calendarObjects[i]
+                        if (!(calendarObject.time.date.get(Calendar.YEAR) == date.get(Calendar.YEAR) && calendarObject.time.date.get(Calendar.WEEK_OF_YEAR) == date.get(Calendar.WEEK_OF_YEAR))) {
                             continue
                         }
 
-                        val x = textBuffer + ((daySize + DAY_PADDING) * (event.time.date.get(Calendar.DAY_OF_WEEK) - 1))
+                        val x = textBuffer + ((daySize + DAY_PADDING) * (calendarObject.time.date.get(Calendar.DAY_OF_WEEK) - 1))
                         val relaX = x - startPos.x
                         if (0 >= relaX && relaX + daySize > 0) {
-                            val y = (event.time.hour * HOUR_SIZE).dp.toPx() + scroll
+                            val y = (calendarObject.time.hour * HOUR_SIZE).dp.toPx() + scroll
                             val relaY = y - startPos.y
-                            if (0 >= relaY && relaY + (event.duration * HOUR_SIZE).dp.toPx() > 0) {
-                                grabbedEvent = true
+                            if (0 >= relaY && relaY + (calendarObject.duration * HOUR_SIZE).dp.toPx() > 0) {
+                                grabbed = true
 
-                                val index = events.size - 1
-                                events[i] = events[index]
-                                events[index] = event
+                                val index = calendarObjects.size - 1
+                                calendarObjects[i] = calendarObjects[index]
+                                calendarObjects[index] = calendarObject
 
                                 grabbedOffset = relaY
                                 break
@@ -88,24 +88,24 @@ fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier:
                 },
 
                 onDragEnd = {
-                    grabbedEvent = false
+                    grabbed = false
                 },
 
                 onDrag = { change, dragAmount ->
                     change.consume()
 
-                    if (!grabbedEvent) {
+                    if (!grabbed) {
                         scroll += dragAmount.y
                     } else {
-                        val index = events.size - 1
-                        val event = events[index]
+                        val index = calendarObjects.size - 1
+                        val calendarObject = calendarObjects[index]
 
                         val day = min(max(((-textBuffer + change.position.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS - 1)
-                        val hour = min(max(((grabbedOffset + change.position.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - event.duration)
+                        val hour = min(max(((grabbedOffset + change.position.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - calendarObject.duration)
 
-                        // Maybe this should be copied for simplicity
-                        event.time.date.set(Calendar.DAY_OF_WEEK, day + 1)
-                        events[index] = Event(Time(event.time.date, hour), event.duration, event.location)
+                        // Maybe this should be copied for simplicity or something
+                        calendarObject.time.date.set(Calendar.DAY_OF_WEEK, day + 1)
+                        calendarObjects[index] = calendarObject.createWithNewTime(Time(calendarObject.time.date, hour))
                     }
                 }
             )
@@ -147,13 +147,15 @@ fun RenderedCalendar(events: SnapshotStateList<Event>, date: Calendar, modifier:
             drawLine(Color.Gray, Offset(textBuffer, y), Offset(size.width, y))
         }
 
-        for (i in events.indices) {
-            val event = events[i]
-            if (grabbedEvent && i == events.size - 1) {
-                drawRoundRect(Color.Green * GRAB_DARKEN_PERCENT, Offset(textBuffer + ((daySize + DAY_PADDING) * (event.time.date.get(Calendar.DAY_OF_WEEK) - 1)), (HOUR_SIZE * event.time.hour).dp.toPx() + scroll), Size(daySize, (event.duration * HOUR_SIZE).dp.toPx()), CornerRadius(CORNER_RADIUS.dp.toPx()))
+        for (i in calendarObjects.indices) {
+            val calendarObject = calendarObjects[i]
+            val color = if (grabbed && i == calendarObjects.size - 1) {
+                calendarObject.color * GRAB_DARKEN_PERCENT
             } else {
-                drawRoundRect(Color.Green, Offset(textBuffer + ((daySize + DAY_PADDING) * (event.time.date.get(Calendar.DAY_OF_WEEK) - 1)), (HOUR_SIZE * event.time.hour).dp.toPx() + scroll), Size(daySize, (event.duration * HOUR_SIZE).dp.toPx()), CornerRadius(CORNER_RADIUS.dp.toPx()))
+                calendarObject.color
             }
+
+            drawRoundRect(color, Offset(textBuffer + ((daySize + DAY_PADDING) * (calendarObject.time.date.get(Calendar.DAY_OF_WEEK) - 1)), (HOUR_SIZE * calendarObject.time.hour).dp.toPx() + scroll), Size(daySize, (calendarObject.duration * HOUR_SIZE).dp.toPx()), CornerRadius(calendarObject.corners.dp.toPx()))
         }
     }
 }
