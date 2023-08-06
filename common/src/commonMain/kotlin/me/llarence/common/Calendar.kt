@@ -25,8 +25,13 @@ operator fun Color.times(value: Float): Color {
     return Color(red * value, green * value, blue * value)
 }
 
+fun SnapshotStateList<CalendarObject>.forceUpdate() {
+    this.add(CalendarDummy())
+    this.removeAt(this.size - 1)
+}
+
 // TODO: Show calendarObjects covered by other calendarObjects
-// TODO: Move some of the repeated math into functions
+// TODO: Move most of the RenderCalender code into separate functions
 // The last event is always the selected one
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -64,16 +69,18 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
 
                     for (i in (calendarObjects.size - 1) downTo 0) {
                         val calendarObject = calendarObjects[i]
-                        if (!(calendarObject.time.date.get(Calendar.YEAR) == date.get(Calendar.YEAR) && calendarObject.time.date.get(Calendar.WEEK_OF_YEAR) == date.get(Calendar.WEEK_OF_YEAR))) {
+                        val time = calendarObject.getTime()
+                        val duration = calendarObject.getDuration()
+                        if (!(time.date.get(Calendar.YEAR) == date.get(Calendar.YEAR) && time.date.get(Calendar.WEEK_OF_YEAR) == date.get(Calendar.WEEK_OF_YEAR))) {
                             continue
                         }
 
-                        val x = textBuffer + ((daySize + DAY_PADDING) * (calendarObject.time.date.get(Calendar.DAY_OF_WEEK) - 1))
+                        val x = textBuffer + ((daySize + DAY_PADDING) * (time.date.get(Calendar.DAY_OF_WEEK) - 1))
                         val relaX = x - startPos.x
                         if (0 >= relaX && relaX + daySize > 0) {
-                            val y = (calendarObject.time.hour * HOUR_SIZE).dp.toPx() + scroll
+                            val y = (time.hour * HOUR_SIZE).dp.toPx() + scroll
                             val relaY = y - startPos.y
-                            if (0 >= relaY && relaY + (calendarObject.duration * HOUR_SIZE).dp.toPx() > 0) {
+                            if (0 >= relaY && relaY + (duration * HOUR_SIZE).dp.toPx() > 0) {
                                 grabbed = true
 
                                 val index = calendarObjects.size - 1
@@ -97,15 +104,23 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
                     if (!grabbed) {
                         scroll += dragAmount.y
                     } else {
-                        val index = calendarObjects.size - 1
-                        val calendarObject = calendarObjects[index]
+                        val calendarObject = calendarObjects.last()
 
                         val day = min(max(((-textBuffer + change.position.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS - 1)
-                        val hour = min(max(((grabbedOffset + change.position.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - calendarObject.duration)
+                        val hour = min(max(((grabbedOffset + change.position.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - calendarObject.getDuration())
 
-                        // Maybe this should be copied for simplicity or something
-                        calendarObject.time.date.set(Calendar.DAY_OF_WEEK, day + 1)
-                        calendarObjects[index] = calendarObject.createWithNewTime(Time(calendarObject.time.date, hour))
+
+                        if (calendarObject is CalendarTask) {
+                            calendarObject.task.dueTime.date.set(Calendar.DAY_OF_WEEK, day + 1)
+                            calendarObject.task.dueTime.hour = hour
+
+                            calendarObjects.forceUpdate()
+                        } else if (calendarObject is CalendarEvent) {
+                            calendarObject.event.time.date.set(Calendar.DAY_OF_WEEK, day + 1)
+                            calendarObject.event.time.hour = hour
+
+                            calendarObjects.forceUpdate()
+                        }
                     }
                 }
             )
@@ -147,18 +162,48 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
             drawLine(Color.Gray, Offset(textBuffer, y), Offset(size.width, y))
         }
 
+        val last = calendarObjects.lastOrNull()
+        val lastTask = if (last is CalendarTask) { last.task } else { null }
+        val lastEvent = if (last is CalendarEvent) { last.event } else { null }
         for (i in calendarObjects.indices) {
             val calendarObject = calendarObjects[i]
-            val color = if (grabbed && i == calendarObjects.size - 1) {
-                calendarObject.color * GRAB_DARKEN_PERCENT
+            val time = calendarObject.getTime()
+            val duration = calendarObject.getDuration()
+
+            var related = false
+            if (lastTask != null) {
+                if (calendarObject is CalendarEvent) {
+                    if (lastTask.event == calendarObject.event) {
+                        related = true
+                    }
+                }
+
+                if (calendarObject is CalendarTask) {
+                    if (lastTask.requirements.contains(calendarObject.task)) {
+                        related = true
+                    }
+                }
+            } else if (lastEvent != null) {
+                if (calendarObject is CalendarTask) {
+                    if (lastEvent == calendarObject.task.event) {
+                        related = true
+                    }
+                }
+            }
+
+            val color = if (related) {
+                // TODO: Make this different
+                calendarObject.color * DARKEN_PERCENT
+            } else if (grabbed && i == calendarObjects.size - 1) {
+                calendarObject.color * DARKEN_PERCENT
             } else {
                 calendarObject.color
             }
 
-            val x = textBuffer + ((daySize + DAY_PADDING) * (calendarObject.time.date.get(Calendar.DAY_OF_WEEK) - 1))
-            val y = (HOUR_SIZE * calendarObject.time.hour).dp.toPx() + scroll
+            val x = textBuffer + ((daySize + DAY_PADDING) * (time.date.get(Calendar.DAY_OF_WEEK) - 1))
+            val y = (HOUR_SIZE * time.hour).dp.toPx() + scroll
             val width = daySize
-            val height = (calendarObject.duration * HOUR_SIZE).dp.toPx()
+            val height = (duration * HOUR_SIZE).dp.toPx()
 
             drawRoundRect(color, Offset(x, y), Size(width, height), CornerRadius(calendarObject.corners.dp.toPx()))
         }

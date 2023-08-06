@@ -2,8 +2,8 @@ package me.llarence.common
 
 import java.util.*
 
-class Time(val date: Calendar, val hour: Float)
+class Time(var date: Calendar, var hour: Float)
 
-class Event(val time: Time, val duration: Float, val location: Int)
+class Event(var time: Time, var duration: Float, var location: Int, var task: Task?)
 
-class Task(val duration: Float, val locations: List<Int>, val requirements: List<Task>, val dueTime: Time, val event: Event?)
+class Task(var duration: Float, val locations: MutableList<Int>, val requirements: MutableList<Task>, val requiredFor: MutableList<Task>, var dueTime: Time, var event: Event?)

@@ -29,14 +29,14 @@ fun app() {
 
             Button({
                 val currData = Calendar.getInstance()
-                calendarObjects.add(0, CalendarEvent(Event(Time(currData, currData.get(Calendar.HOUR_OF_DAY).toFloat()), DEFAULT_HOURS, 0), randomColor()))
+                calendarObjects.add(0, CalendarEvent(Event(Time(currData, currData.get(Calendar.HOUR_OF_DAY).toFloat()), DEFAULT_HOURS, 0, null), randomColor()))
             }) {
                 Text("New Event")
             }
 
             Button({
                 val currData = Calendar.getInstance()
-                calendarObjects.add(0, CalendarTask(Task(DEFAULT_HOURS, listOf(), listOf(), Time(currData, currData.get(Calendar.HOUR_OF_DAY).toFloat()), null), randomColor()))
+                calendarObjects.add(0, CalendarTask(Task(DEFAULT_HOURS, mutableListOf(), mutableListOf(), mutableListOf(), Time(currData, currData.get(Calendar.HOUR_OF_DAY).toFloat()), null), randomColor()))
             }) {
                 Text("New Task")
             }
@@ -47,8 +47,9 @@ fun app() {
             val isEvent = last is CalendarEvent
             if (isEvent && (grabbed || calendarObjects.size == 1)) {
                 val res = text.toFloatOrNull()
-                if (res != last!!.duration) {
-                    text = last.duration.toString()
+                val duration = last!!.getDuration()
+                if (res != duration) {
+                    text = duration.toString()
                 }
             }
 
@@ -57,7 +58,9 @@ fun app() {
 
                 val res = it.toFloatOrNull()
                 if (res != null) {
-                    calendarObjects[calendarObjects.size - 1] = (last as CalendarEvent).createWithDuration(res)
+                    last as CalendarEvent
+                    last.event.duration = res
+                    calendarObjects.forceUpdate()
                 }
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
@@ -72,17 +75,20 @@ fun app() {
 
             Slider(r, {
                 r = it
-                calendarObjects[calendarObjects.size - 1] = last!!.createWithNewColor(Color(r, g, b))
+                last!!.color = Color(r, g, b)
+                calendarObjects.forceUpdate()
             }, Modifier.size(100.dp), last != null, colors = SliderDefaults.colors(thumbColor = Color(r, 0f, 0f)))
 
             Slider(g, {
                 g = it
-                calendarObjects[calendarObjects.size - 1] = last!!.createWithNewColor(Color(r, g, b))
+                last!!.color = Color(r, g, b)
+                calendarObjects.forceUpdate()
             }, Modifier.size(100.dp), last != null, colors = SliderDefaults.colors(thumbColor = Color(0f, g, 0f)))
 
             Slider(b, {
                 b = it
-                calendarObjects[calendarObjects.size - 1] = last!!.createWithNewColor(Color(r, g, b))
+                last!!.color = Color(r, g, b)
+                calendarObjects.forceUpdate()
             }, Modifier.size(100.dp), last != null, colors = SliderDefaults.colors(thumbColor = Color(0f, 0f, b)))
         }
 

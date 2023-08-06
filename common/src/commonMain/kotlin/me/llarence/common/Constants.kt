@@ -10,7 +10,7 @@ const val TEXT_PADDING = 2f
 
 const val CORNER_RADIUS = 10f
 
-const val GRAB_DARKEN_PERCENT = 0.8f
+const val DARKEN_PERCENT = 0.8f
 
 const val HOUR_SNAP = 5f / 60f
 
