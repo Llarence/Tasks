@@ -47,7 +47,8 @@ fun app() {
             val isEvent = last is CalendarEvent
             if (isEvent && (grabbed || calendarObjects.size == 1)) {
                 val res = text.toFloatOrNull()
-                val duration = last!!.getDuration()
+                last as CalendarEvent
+                val duration = last.event.duration
                 if (res != duration) {
                     text = duration.toString()
                 }
@@ -68,28 +69,60 @@ fun app() {
             var g by remember { mutableStateOf(0f) }
             var b by remember { mutableStateOf(0f) }
             if (grabbed || calendarObjects.size == 1) {
-                r = last!!.color.red
-                g = last.color.green
-                b = last.color.blue
+                if (last is ColorableCalendarObject) {
+                    r = last.color.red
+                    g = last.color.green
+                    b = last.color.blue
+                }
             }
 
             Slider(r, {
                 r = it
-                last!!.color = Color(r, g, b)
+                (last as ColorableCalendarObject).color = Color(r, g, b)
                 calendarObjects.forceUpdate()
-            }, Modifier.size(100.dp), last != null, colors = SliderDefaults.colors(thumbColor = Color(r, 0f, 0f)))
+            }, Modifier.size(100.dp), last is ColorableCalendarObject, colors = SliderDefaults.colors(thumbColor = Color(r, 0f, 0f)))
 
             Slider(g, {
                 g = it
-                last!!.color = Color(r, g, b)
+                (last as ColorableCalendarObject).color = Color(r, g, b)
                 calendarObjects.forceUpdate()
-            }, Modifier.size(100.dp), last != null, colors = SliderDefaults.colors(thumbColor = Color(0f, g, 0f)))
+            }, Modifier.size(100.dp), last is ColorableCalendarObject, colors = SliderDefaults.colors(thumbColor = Color(0f, g, 0f)))
 
             Slider(b, {
                 b = it
-                last!!.color = Color(r, g, b)
+                (last as ColorableCalendarObject).color = Color(r, g, b)
                 calendarObjects.forceUpdate()
-            }, Modifier.size(100.dp), last != null, colors = SliderDefaults.colors(thumbColor = Color(0f, 0f, b)))
+            }, Modifier.size(100.dp), last is ColorableCalendarObject, colors = SliderDefaults.colors(thumbColor = Color(0f, 0f, b)))
+
+            Text("Set Event/Requirement")
+
+            var taskSelected by remember { mutableStateOf<Task?>(null) }
+            val checked = taskSelected != null
+            if (checked) {
+                if (last is CalendarEvent) {
+                    taskSelected!!.event = last.event
+                    last.event.task = taskSelected
+                    calendarObjects.forceUpdate()
+
+                    taskSelected = null
+                } else if (last is CalendarTask && last.task != taskSelected) {
+                    taskSelected!!.requirements.add(last.task)
+                    last.task.requiredFor.add(taskSelected!!)
+                    calendarObjects.forceUpdate()
+
+                    taskSelected = null
+                }
+            }
+
+            Switch(checked, {
+                if (it) {
+                    if (last is CalendarTask) {
+                        taskSelected = last.task
+                    }
+                } else {
+                    taskSelected = null
+                }
+            })
         }
 
         RenderedCalendar(calendarObjects, Calendar.getInstance(), Modifier.fillMaxSize(), grabbedEventState)

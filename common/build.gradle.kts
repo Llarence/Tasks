@@ -22,6 +22,8 @@ kotlin {
                 api(compose.foundation)
                 api(compose.material)
 
+                implementation("androidx.compose.ui:ui-graphics:1.4.3")
+
                 implementation("org.slf4j:slf4j-simple:1.7.30")
 
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.3.1")

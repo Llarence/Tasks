@@ -10,6 +10,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ExperimentalTextApi
@@ -69,27 +74,15 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
 
                     for (i in (calendarObjects.size - 1) downTo 0) {
                         val calendarObject = calendarObjects[i]
-                        val time = calendarObject.getTime()
-                        val duration = calendarObject.getDuration()
-                        if (!(time.date.get(Calendar.YEAR) == date.get(Calendar.YEAR) && time.date.get(Calendar.WEEK_OF_YEAR) == date.get(Calendar.WEEK_OF_YEAR))) {
-                            continue
-                        }
+                        if (calendarObject.inBounds(this, startPos, textBuffer, daySize, scroll)) {
+                            grabbed = true
 
-                        val x = textBuffer + ((daySize + DAY_PADDING) * (time.date.get(Calendar.DAY_OF_WEEK) - 1))
-                        val relaX = x - startPos.x
-                        if (0 >= relaX && relaX + daySize > 0) {
-                            val y = (time.hour * HOUR_SIZE).dp.toPx() + scroll
-                            val relaY = y - startPos.y
-                            if (0 >= relaY && relaY + (duration * HOUR_SIZE).dp.toPx() > 0) {
-                                grabbed = true
+                            val index = calendarObjects.size - 1
+                            calendarObjects[i] = calendarObjects[index]
+                            calendarObjects[index] = calendarObject
 
-                                val index = calendarObjects.size - 1
-                                calendarObjects[i] = calendarObjects[index]
-                                calendarObjects[index] = calendarObject
-
-                                grabbedOffset = relaY
-                                break
-                            }
+                            grabbedOffset = 0f
+                            break
                         }
                     }
                 },
@@ -104,21 +97,9 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
                     if (!grabbed) {
                         scroll += dragAmount.y
                     } else {
-                        val calendarObject = calendarObjects.last()
-
-                        val day = min(max(((-textBuffer + change.position.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS - 1)
-                        val hour = min(max(((grabbedOffset + change.position.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - calendarObject.getDuration())
-
-
-                        if (calendarObject is CalendarTask) {
-                            calendarObject.task.dueTime.date.set(Calendar.DAY_OF_WEEK, day + 1)
-                            calendarObject.task.dueTime.hour = hour
-
-                            calendarObjects.forceUpdate()
-                        } else if (calendarObject is CalendarEvent) {
-                            calendarObject.event.time.date.set(Calendar.DAY_OF_WEEK, day + 1)
-                            calendarObject.event.time.hour = hour
-
+                        val calendarObject = calendarObjects.lastOrNull()
+                        if (calendarObject != null) {
+                            calendarObject.drag(this, change.position, grabbedOffset, textBuffer, daySize, scroll)
                             calendarObjects.forceUpdate()
                         }
                     }
@@ -162,50 +143,9 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
             drawLine(Color.Gray, Offset(textBuffer, y), Offset(size.width, y))
         }
 
-        val last = calendarObjects.lastOrNull()
-        val lastTask = if (last is CalendarTask) { last.task } else { null }
-        val lastEvent = if (last is CalendarEvent) { last.event } else { null }
         for (i in calendarObjects.indices) {
             val calendarObject = calendarObjects[i]
-            val time = calendarObject.getTime()
-            val duration = calendarObject.getDuration()
-
-            var related = false
-            if (lastTask != null) {
-                if (calendarObject is CalendarEvent) {
-                    if (lastTask.event == calendarObject.event) {
-                        related = true
-                    }
-                }
-
-                if (calendarObject is CalendarTask) {
-                    if (lastTask.requirements.contains(calendarObject.task)) {
-                        related = true
-                    }
-                }
-            } else if (lastEvent != null) {
-                if (calendarObject is CalendarTask) {
-                    if (lastEvent == calendarObject.task.event) {
-                        related = true
-                    }
-                }
-            }
-
-            val color = if (related) {
-                // TODO: Make this different
-                calendarObject.color * DARKEN_PERCENT
-            } else if (grabbed && i == calendarObjects.size - 1) {
-                calendarObject.color * DARKEN_PERCENT
-            } else {
-                calendarObject.color
-            }
-
-            val x = textBuffer + ((daySize + DAY_PADDING) * (time.date.get(Calendar.DAY_OF_WEEK) - 1))
-            val y = (HOUR_SIZE * time.hour).dp.toPx() + scroll
-            val width = daySize
-            val height = (duration * HOUR_SIZE).dp.toPx()
-
-            drawRoundRect(color, Offset(x, y), Size(width, height), CornerRadius(calendarObject.corners.dp.toPx()))
+            calendarObject.draw(this, grabbed, textBuffer, daySize, scroll)
         }
     }
 }
