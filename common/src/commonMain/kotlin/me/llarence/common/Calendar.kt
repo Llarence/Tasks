@@ -6,15 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.asComposePath
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ExperimentalTextApi
@@ -23,7 +17,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 import java.util.Calendar
 
 operator fun Color.times(value: Float): Color {
@@ -40,7 +33,7 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 // The last event is always the selected one
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: Calendar, modifier: Modifier = Modifier, grabbedDelegate: MutableState<Boolean> = mutableStateOf(false)) {
+fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: Calendar, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
 
     var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
@@ -48,8 +41,8 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
     var textBuffer by remember { mutableStateOf(0f) }
     var daySize by remember { mutableStateOf(0f) }
 
-    var grabbed by grabbedDelegate
-    var grabbedOffset by remember { mutableStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    var dragOffset by remember { mutableStateOf(0f) }
 
     Canvas(
         modifier
@@ -70,36 +63,37 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
         .pointerInput(Unit) {
             detectDragGesturesAfterLongPress(
                 onDragStart = { startPos ->
-                    grabbed = false
+                    dragging = false
 
                     for (i in (calendarObjects.size - 1) downTo 0) {
                         val calendarObject = calendarObjects[i]
-                        if (calendarObject.inBounds(this, startPos, textBuffer, daySize, scroll)) {
-                            grabbed = true
+                        val offset = calendarObject.inBounds(this, startPos, textBuffer, daySize, scroll)
+                        if (offset != null) {
+                            dragging = true
 
                             val index = calendarObjects.size - 1
                             calendarObjects[i] = calendarObjects[index]
                             calendarObjects[index] = calendarObject
 
-                            grabbedOffset = 0f
+                            dragOffset = offset
                             break
                         }
                     }
                 },
 
                 onDragEnd = {
-                    grabbed = false
+                    dragging = false
                 },
 
                 onDrag = { change, dragAmount ->
                     change.consume()
 
-                    if (!grabbed) {
+                    if (!dragging) {
                         scroll += dragAmount.y
                     } else {
                         val calendarObject = calendarObjects.lastOrNull()
                         if (calendarObject != null) {
-                            calendarObject.drag(this, change.position, grabbedOffset, textBuffer, daySize, scroll)
+                            calendarObject.drag(this, change.position, dragOffset, textBuffer, daySize, scroll)
                             calendarObjects.forceUpdate()
                         }
                     }
@@ -144,8 +138,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
         }
 
         for (i in calendarObjects.indices) {
-            val calendarObject = calendarObjects[i]
-            calendarObject.draw(this, grabbed, textBuffer, daySize, scroll)
+            calendarObjects[i].draw(this, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll)
         }
     }
 }

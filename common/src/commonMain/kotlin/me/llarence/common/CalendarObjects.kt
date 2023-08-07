@@ -18,11 +18,11 @@ import kotlin.math.roundToInt
 abstract class CalendarObject {
     // Kinda dumb but I want the scope mostly for .toPx()
     // It feels like less should be passed into these functions
-    abstract val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Boolean
+    abstract val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Float?
     abstract val drawFun: DrawScope.(Boolean, Float, Float, Float) -> Unit
     abstract val dragFun: PointerInputScope.(Offset, Float, Float, Float, Float) -> Unit
 
-    fun inBounds(pointerInputScope: PointerInputScope, offset: Offset, textBuffer: Float, daySize: Float, scroll: Float): Boolean {
+    fun inBounds(pointerInputScope: PointerInputScope, offset: Offset, textBuffer: Float, daySize: Float, scroll: Float): Float? {
         return inBoundsFun(pointerInputScope, offset, textBuffer, daySize, scroll)
     }
 
@@ -35,29 +35,27 @@ abstract class CalendarObject {
     }
 }
 
-abstract class ColorableCalendarObject(var color: Color) : CalendarObject() {
+abstract class ColorableCalendarObject(var color: Color) : CalendarObject()
 
-}
-
-class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(color) {
-    override val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Boolean = { offset, textBuffer, daySize, scroll ->
+class CalendarEvent(val event: Event, inColor: Color) : ColorableCalendarObject(inColor) {
+    override val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Float? = { offset, textBuffer, daySize, scroll ->
         val x = textBuffer + ((daySize + DAY_PADDING) * (event.time.date.get(Calendar.DAY_OF_WEEK) - 1))
         val relaX = x - offset.x
         if (0 >= relaX && relaX + daySize > 0) {
             val y = (event.time.hour * HOUR_SIZE).dp.toPx() + scroll
             val relaY = y - offset.y
             if (0 >= relaY && relaY + (event.duration * HOUR_SIZE).dp.toPx() > 0) {
-                true
+                relaY
             } else {
-                false
+                null
             }
         } else {
-            false
+            null
         }
     }
 
     override val drawFun: DrawScope.(Boolean, Float, Float, Float) -> Unit = { grabbed, textBuffer, daySize, scroll ->
-        val color = if (grabbed) {
+        val currColor = if (grabbed) {
             color * DARKEN_PERCENT
         } else {
             color
@@ -67,7 +65,7 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
         val y = (HOUR_SIZE * event.time.hour).dp.toPx() + scroll
         val height = (event.duration * HOUR_SIZE).dp.toPx()
 
-        drawRoundRect(color, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.dp.toPx()))
+        drawRoundRect(currColor, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.dp.toPx()))
     }
 
     override val dragFun: PointerInputScope.(Offset, Float, Float, Float, Float) -> Unit = { change, grabbedOffset, textBuffer, daySize, scroll ->
@@ -79,25 +77,25 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
     }
 }
 
-class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color) {
-    override val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Boolean = { offset, textBuffer, daySize, scroll ->
+class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inColor) {
+    override val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Float? = { offset, textBuffer, daySize, scroll ->
         val x = textBuffer + ((daySize + DAY_PADDING) * (task.dueTime.date.get(Calendar.DAY_OF_WEEK) - 1))
         val relaX = x - offset.x
         if (0 >= relaX && relaX + daySize > 0) {
             val y = (task.dueTime.hour * HOUR_SIZE).dp.toPx() + scroll
             val relaY = y - offset.y
             if (0 >= relaY && relaY + (TASK_HOURS * HOUR_SIZE).dp.toPx() > 0) {
-                true
+                relaY
             } else {
-                false
+                null
             }
         } else {
-            false
+            null
         }
     }
 
     override val drawFun: DrawScope.(Boolean, Float, Float, Float) -> Unit = { grabbed, textBuffer, daySize, scroll ->
-        val color = if (grabbed) {
+        val currColor = if (grabbed) {
             color * DARKEN_PERCENT
         } else {
             color
@@ -107,7 +105,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
         val y = (HOUR_SIZE * task.dueTime.hour).dp.toPx() + scroll
         val height = (TASK_HOURS * HOUR_SIZE).dp.toPx()
 
-        drawRoundRect(color, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.dp.toPx()))
+        drawRoundRect(currColor, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.dp.toPx()))
     }
 
     override val dragFun: PointerInputScope.(Offset, Float, Float, Float, Float) -> Unit = { change, grabbedOffset, textBuffer, daySize, scroll ->
@@ -120,7 +118,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
 }
 
 class CalendarDummy : CalendarObject() {
-    override val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Boolean = { _, _, _, _ ->
+    override val inBoundsFun: PointerInputScope.(Offset, Float, Float, Float) -> Float? = { _, _, _, _ ->
         throw NotImplementedError()
     }
 

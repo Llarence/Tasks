@@ -20,13 +20,9 @@ fun randomColor(): Color {
 @Composable
 fun app() {
     Row {
-        val grabbedEventState = remember { mutableStateOf(false) }
-
         val calendarObjects = remember { mutableStateListOf<CalendarObject>() }
 
         Column {
-            val grabbed by grabbedEventState
-
             Button({
                 val currData = Calendar.getInstance()
                 calendarObjects.add(0, CalendarEvent(Event(Time(currData, currData.get(Calendar.HOUR_OF_DAY).toFloat()), DEFAULT_HOURS, 0, null), randomColor()))
@@ -45,7 +41,7 @@ fun app() {
 
             val last = calendarObjects.lastOrNull()
             val isEvent = last is CalendarEvent
-            if (isEvent && (grabbed || calendarObjects.size == 1)) {
+            if (isEvent) {
                 val res = text.toFloatOrNull()
                 last as CalendarEvent
                 val duration = last.event.duration
@@ -68,12 +64,10 @@ fun app() {
             var r by remember { mutableStateOf(0f) }
             var g by remember { mutableStateOf(0f) }
             var b by remember { mutableStateOf(0f) }
-            if (grabbed || calendarObjects.size == 1) {
-                if (last is ColorableCalendarObject) {
-                    r = last.color.red
-                    g = last.color.green
-                    b = last.color.blue
-                }
+            if (last is ColorableCalendarObject) {
+                r = last.color.red
+                g = last.color.green
+                b = last.color.blue
             }
 
             Slider(r, {
@@ -125,6 +119,6 @@ fun app() {
             })
         }
 
-        RenderedCalendar(calendarObjects, Calendar.getInstance(), Modifier.fillMaxSize(), grabbedEventState)
+        RenderedCalendar(calendarObjects, Calendar.getInstance(), Modifier.fillMaxSize())
     }
 }
