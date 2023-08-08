@@ -29,7 +29,6 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 }
 
 // TODO: Show calendarObjects covered by other calendarObjects
-// TODO: Move most of the RenderCalender code into separate functions
 // The last event is always the selected one
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -67,7 +66,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
 
                     for (i in (calendarObjects.size - 1) downTo 0) {
                         val calendarObject = calendarObjects[i]
-                        val offset = calendarObject.inBounds(this, startPos, textBuffer, daySize, scroll)
+                        val offset = calendarObject.inBounds(this, date, startPos, textBuffer, daySize, scroll)
                         if (offset != null) {
                             dragging = true
 
@@ -93,7 +92,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
                     } else {
                         val calendarObject = calendarObjects.lastOrNull()
                         if (calendarObject != null) {
-                            calendarObject.drag(this, change.position, dragOffset, textBuffer, daySize, scroll)
+                            calendarObject.drag(this, date, change.position, dragOffset, textBuffer, daySize, scroll)
                             calendarObjects.forceUpdate()
                         }
                     }
@@ -138,7 +137,11 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
         }
 
         for (i in calendarObjects.indices) {
-            calendarObjects[i].draw(this, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll)
+            calendarObjects[i].preDraw(this, date, textBuffer, daySize, scroll)
+        }
+
+        for (i in calendarObjects.indices) {
+            calendarObjects[i].draw(this, date, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll)
         }
     }
 }

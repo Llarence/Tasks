@@ -15,7 +15,7 @@ fun randomColor(): Color {
     return Color(Random.nextBits(8), Random.nextBits(8), Random.nextBits(8))
 }
 
-// TODO: Check stuff to make sure it is using compose properly for performance
+// TODO: Check stuff to make sure it complies with compose
 // TODO: Add removing (it will mean has grabbed has to be set so false and renamed)
 @Composable
 fun app() {
@@ -37,28 +37,19 @@ fun app() {
                 Text("New Task")
             }
 
-            var text by remember { mutableStateOf("") }
-
             val last = calendarObjects.lastOrNull()
             val isEvent = last is CalendarEvent
-            if (isEvent) {
-                val res = text.toFloatOrNull()
+            val duration = if (isEvent) {
                 last as CalendarEvent
-                val duration = last.event.duration
-                if (res != duration) {
-                    text = duration.toString()
-                }
+                last.event.duration
+            } else {
+                0f
             }
 
-            TextField(text, {
-                text = it
-
-                val res = it.toFloatOrNull()
-                if (res != null) {
-                    last as CalendarEvent
-                    last.event.duration = res
-                    calendarObjects.forceUpdate()
-                }
+            RestrictedTextField(duration, Float::toString, String::toFloatOrNull, {
+                last as CalendarEvent
+                last.event.duration = it
+                calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
             var r by remember { mutableStateOf(0f) }
@@ -117,8 +108,91 @@ fun app() {
                     taskSelected = null
                 }
             })
+
+            val isTask = last is CalendarTask
+            val hour = if (isEvent) {
+                last as CalendarEvent
+                last.event.time.hour
+            } else if (isTask) {
+                last as CalendarTask
+                last.task.dueTime.hour
+            } else {
+                0f
+            }
+
+            RestrictedTextField(hour, Float::toString, {
+                val float = it.toFloatOrNull()
+                if (float == null) {
+                    null
+                } else {
+                    if (float >= 0f && float <= 24f - duration) {
+                        float
+                    } else {
+                        null
+                    }
+                }
+            }, {
+                if (isEvent) {
+                    last as CalendarEvent
+                    last.event.time.hour = it
+                } else if (isTask) {
+                    last as CalendarTask
+                    last.task.dueTime.hour = it
+                }
+                calendarObjects.forceUpdate()
+            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+
+            val day = if (isEvent) {
+                last as CalendarEvent
+                last.event.time.date.get(Calendar.DAY_OF_WEEK)
+            } else if (isTask) {
+                last as CalendarTask
+                last.task.dueTime.date.get(Calendar.DAY_OF_WEEK)
+            } else {
+                0
+            }
+
+            RestrictedTextField(day, Int::toString, {
+                val int = it.toIntOrNull()
+                if (int == null) {
+                    null
+                } else {
+                    if (int in 1..7) {
+                        int
+                    } else {
+                        null
+                    }
+                }
+            }, {
+                if (isEvent) {
+                    last as CalendarEvent
+                    last.event.time.date.set(Calendar.DAY_OF_WEEK, it)
+                } else if (isTask) {
+                    last as CalendarTask
+                    last.task.dueTime.date.set(Calendar.DAY_OF_WEEK, it)
+                }
+                calendarObjects.forceUpdate()
+            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         }
 
-        RenderedCalendar(calendarObjects, Calendar.getInstance(), Modifier.fillMaxSize())
+        Column {
+            val calendarDate by remember { mutableStateOf(Calendar.getInstance()) }
+
+            Row {
+                Button({
+                    calendarDate.add(Calendar.WEEK_OF_YEAR, -1)
+                }) {
+                    Text("Previous Week")
+                }
+
+                Button({
+                    calendarDate.add(Calendar.WEEK_OF_YEAR, 1)
+                }) {
+                    Text("Next Week")
+                }
+            }
+
+            RenderedCalendar(calendarObjects, calendarDate, Modifier.fillMaxSize())
+        }
     }
 }

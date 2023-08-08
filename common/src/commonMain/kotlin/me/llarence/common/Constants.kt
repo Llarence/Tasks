@@ -1,5 +1,7 @@
 package me.llarence.common
 
+// TODO: Make some of these dp (maybe?)
+
 const val HOURS = 24
 const val DAYS = 7
 
@@ -19,3 +21,7 @@ const val DEFAULT_HOURS = 1f
 const val TASK_HOURS = 10f / 60f
 
 const val SCROLL_SPEED = 0.5f
+
+// TODO: Rename
+const val PATH_STRENGTH = 100
+const val PATH_INTERVALS = 10f
