@@ -29,6 +29,7 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 }
 
 // TODO: Show calendarObjects covered by other calendarObjects
+// TODO: Make this render based on calendar so special time rules apply (if necessary)
 // The last event is always the selected one
 @OptIn(ExperimentalTextApi::class)
 @Composable

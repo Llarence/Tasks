@@ -15,6 +15,24 @@ fun randomColor(): Color {
     return Color(Random.nextBits(8), Random.nextBits(8), Random.nextBits(8))
 }
 
+fun monthToName(month: Int): String {
+    return when(month) {
+        0 -> "January"
+        1 -> "February"
+        2 -> "March"
+        3 -> "April"
+        4 -> "May"
+        5 -> "June"
+        6 -> "July"
+        7 -> "August"
+        8 -> "September"
+        9 -> "October"
+        10 -> "November"
+        11 -> "December"
+        else -> throw IllegalArgumentException()
+    }
+}
+
 // TODO: Check stuff to make sure it complies with compose
 // TODO: Add removing (it will mean has grabbed has to be set so false and renamed)
 @Composable
@@ -24,15 +42,15 @@ fun app() {
 
         Column {
             Button({
-                val currData = Calendar.getInstance()
-                calendarObjects.add(0, CalendarEvent(Event(Time(currData, currData.get(Calendar.HOUR_OF_DAY).toFloat()), DEFAULT_HOURS, 0, null), randomColor()))
+                val currCalendar = Calendar.getInstance()
+                calendarObjects.add(0, CalendarEvent(Event(Time(currCalendar, currCalendar.get(Calendar.HOUR_OF_DAY).toFloat()), DEFAULT_HOURS, 0, null), randomColor()))
             }) {
                 Text("New Event")
             }
 
             Button({
-                val currData = Calendar.getInstance()
-                calendarObjects.add(0, CalendarTask(Task(DEFAULT_HOURS, mutableListOf(), mutableListOf(), mutableListOf(), Time(currData, currData.get(Calendar.HOUR_OF_DAY).toFloat()), null), randomColor()))
+                val currCalendar = Calendar.getInstance()
+                calendarObjects.add(0, CalendarTask(Task(DEFAULT_HOURS, mutableListOf(), mutableListOf(), mutableListOf(), Time(currCalendar, currCalendar.get(Calendar.HOUR_OF_DAY).toFloat()), null), randomColor()))
             }) {
                 Text("New Task")
             }
@@ -79,22 +97,36 @@ fun app() {
                 calendarObjects.forceUpdate()
             }, Modifier.size(100.dp), last is ColorableCalendarObject, colors = SliderDefaults.colors(thumbColor = Color(0f, 0f, b)))
 
-            Text("Set Event/Requirement")
-
             var taskSelected by remember { mutableStateOf<Task?>(null) }
             val checked = taskSelected != null
             if (checked) {
                 if (last is CalendarEvent) {
-                    taskSelected!!.event = last.event
-                    last.event.task = taskSelected
-                    calendarObjects.forceUpdate()
+                    if (taskSelected!!.event == last.event) {
+                        taskSelected!!.event = null
+                        last.event.task = null
+                    } else {
+                        taskSelected!!.event?.task = null
+                        last.event.task?.event = null
 
+                        taskSelected!!.event = last.event
+                        last.event.task = taskSelected
+                    }
+
+                    calendarObjects.forceUpdate()
                     taskSelected = null
                 } else if (last is CalendarTask && last.task != taskSelected) {
-                    taskSelected!!.requirements.add(last.task)
-                    last.task.requiredFor.add(taskSelected!!)
-                    calendarObjects.forceUpdate()
+                    if (taskSelected!!.requirements.contains(last.task)) {
+                        taskSelected!!.requirements.remove(last.task)
+                        last.task.requiredFor.remove(taskSelected!!)
+                    } else {
+                        taskSelected!!.requiredFor.remove(last.task)
+                        last.task.requirements.remove(taskSelected!!)
 
+                        taskSelected!!.requirements.add(last.task)
+                        last.task.requiredFor.add(taskSelected!!)
+                    }
+
+                    calendarObjects.forceUpdate()
                     taskSelected = null
                 }
             }
@@ -140,7 +172,7 @@ fun app() {
                     last.task.dueTime.hour = it
                 }
                 calendarObjects.forceUpdate()
-            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            }, enabled = isEvent || isTask, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
             val day = if (isEvent) {
                 last as CalendarEvent
@@ -176,20 +208,31 @@ fun app() {
         }
 
         Column {
-            val calendarDate by remember { mutableStateOf(Calendar.getInstance()) }
+            var calendarDate by remember {
+                val currCalendar = Calendar.getInstance()
+                currCalendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+                mutableStateOf(currCalendar)
+            }
 
+            // TODO: See if there is way to modify the date without copying
             Row {
                 Button({
-                    calendarDate.add(Calendar.WEEK_OF_YEAR, -1)
+                    val newCalendarDate = calendarDate.clone() as Calendar
+                    newCalendarDate.add(Calendar.WEEK_OF_YEAR, -1)
+                    calendarDate = newCalendarDate
                 }) {
                     Text("Previous Week")
                 }
 
                 Button({
-                    calendarDate.add(Calendar.WEEK_OF_YEAR, 1)
+                    val newCalendarDate = calendarDate.clone() as Calendar
+                    newCalendarDate.add(Calendar.WEEK_OF_YEAR, 1)
+                    calendarDate = newCalendarDate
                 }) {
                     Text("Next Week")
                 }
+
+                Text("${monthToName(calendarDate.get(Calendar.MONTH))} ${calendarDate.get(Calendar.DAY_OF_MONTH)}, ${calendarDate.get(Calendar.YEAR)}")
             }
 
             RenderedCalendar(calendarObjects, calendarDate, Modifier.fillMaxSize())

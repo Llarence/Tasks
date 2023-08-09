@@ -6,15 +6,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.PathEffect.Companion.cornerPathEffect
-import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowPosition.PlatformDefault.x
-import androidx.compose.ui.window.WindowPosition.PlatformDefault.y
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -125,19 +120,32 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
         }
     }
 
+    val pathTo: DrawScope.(Float, Float, Time, Float, Float, Float, PathEffect) -> Unit = { xFrom, yFrom, time, textBuffer, daySize, scroll, pathEffect ->
+        val xTo = textBuffer + ((daySize + DAY_PADDING) * (time.date.get(Calendar.DAY_OF_WEEK) - 1)) + daySize / 2f
+        val yTo = (HOUR_SIZE * time.hour).dp.toPx() + scroll
+
+        val path = Path()
+        path.moveTo(xFrom, yFrom)
+        path.cubicTo(xTo, yFrom + PATH_STRENGTH.dp.toPx(), xFrom, yTo - PATH_STRENGTH.dp.toPx(), xTo, yTo)
+        drawPath(path, color, style = Stroke(pathEffect = pathEffect))
+    }
+
     override val preDrawFun: DrawScope.(Calendar, Float, Float, Float) -> Unit = { calendarDate, textBuffer, daySize, scroll ->
-        if (task.event != null && sameWeek(task.event!!.time.date, calendarDate) && sameWeek(task.dueTime.date, calendarDate)) {
+        if (sameWeek(task.dueTime.date, calendarDate)) {
             val xFrom = textBuffer + ((daySize + DAY_PADDING) * (task.dueTime.date.get(Calendar.DAY_OF_WEEK) - 1)) + daySize / 2f
             val yFrom = (HOUR_SIZE * task.dueTime.hour).dp.toPx() + scroll + (TASK_HOURS * HOUR_SIZE).dp.toPx()
 
-            val xTo = textBuffer + ((daySize + DAY_PADDING) * (task.event!!.time.date.get(Calendar.DAY_OF_WEEK) - 1)) + daySize / 2f
-            val yTo = (HOUR_SIZE * task.event!!.time.hour).dp.toPx() + scroll
-
-            val path = Path()
-            path.moveTo(xFrom, yFrom)
-            path.cubicTo(xTo, yFrom + PATH_STRENGTH.dp.toPx(), xFrom, yTo - PATH_STRENGTH.dp.toPx(), xTo, yTo)
             val interval = PATH_INTERVALS.dp.toPx()
-            drawPath(path, color, style = Stroke(pathEffect = PathEffect.dashPathEffect(floatArrayOf(interval, interval))))
+            val pathEffect = PathEffect.dashPathEffect(floatArrayOf(interval, interval))
+            if (task.event != null && sameWeek(task.event!!.time.date, calendarDate)) {
+                pathTo(this, xFrom, yFrom, task.event!!.time, textBuffer, daySize, scroll, pathEffect)
+            }
+
+            for (requiredTask in task.requirements) {
+                if (sameWeek(requiredTask.dueTime.date, calendarDate)) {
+                    pathTo(this, xFrom, yFrom, requiredTask.dueTime, textBuffer, daySize, scroll, pathEffect)
+                }
+            }
         }
     }
 

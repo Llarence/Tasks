@@ -6,19 +6,23 @@ import androidx.compose.runtime.*
 
 @Composable
 fun <T> RestrictedTextField(value: T, valueToText: (T) -> String, textToValue: (String) -> T?, onValueChange: (T) -> Unit, enabled: Boolean = true, keyboardOptions: KeyboardOptions = KeyboardOptions()) {
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf<String?>(null) }
 
-    val textValue = textToValue(text)
-    if (textValue != null) {
-        if (textValue != value) {
-            text = valueToText(value)
+    if (text == null) {
+        text = valueToText(value)
+    } else {
+        val textValue = textToValue(text!!)
+        if (textValue != null) {
+            if (textValue != value) {
+                text = valueToText(value)
+            }
         }
     }
 
-    TextField(text, {
+    TextField(text!!, {
         text = it
 
-        val currValue = textToValue(text)
+        val currValue = textToValue(text!!)
         if (currValue != null) {
             onValueChange(currValue)
         }
