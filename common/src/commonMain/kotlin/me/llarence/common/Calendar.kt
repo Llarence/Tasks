@@ -24,8 +24,8 @@ operator fun Color.times(value: Float): Color {
 }
 
 fun SnapshotStateList<CalendarObject>.forceUpdate() {
-    this.add(CalendarDummy())
-    this.removeAt(this.size - 1)
+    this.add(0, CalendarDummy())
+    this.removeAt(0)
 }
 
 // TODO: Show calendarObjects covered by other calendarObjects
