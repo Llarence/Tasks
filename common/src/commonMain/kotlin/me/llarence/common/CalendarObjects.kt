@@ -52,9 +52,7 @@ abstract class ColorableCalendarObject(var color: Color) : CalendarObject()
 
 class CalendarEvent(val event: Event, inColor: Color) : ColorableCalendarObject(inColor) {
     override val inBoundsFun: PointerInputScope.(Calendar, Offset, Float, Float, Float) -> Float? = { calendarDate, offset, textBuffer, daySize, scroll ->
-        if (!sameWeek(event.time.date, calendarDate)) {
-            null
-        } else {
+        if (sameWeek(event.time.date, calendarDate)) {
             val x = textBuffer + ((daySize + DAY_PADDING) * (event.time.date.get(Calendar.DAY_OF_WEEK) - 1))
             val relaX = x - offset.x
             if (0 >= relaX && relaX + daySize > 0) {
@@ -68,6 +66,8 @@ class CalendarEvent(val event: Event, inColor: Color) : ColorableCalendarObject(
             } else {
                 null
             }
+        } else {
+            null
         }
     }
 
@@ -101,9 +101,7 @@ class CalendarEvent(val event: Event, inColor: Color) : ColorableCalendarObject(
 
 class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inColor) {
     override val inBoundsFun: PointerInputScope.(Calendar, Offset, Float, Float, Float) -> Float? = { calendarDate, offset, textBuffer, daySize, scroll ->
-        if (!sameWeek(task.dueTime.date, calendarDate)) {
-            null
-        } else {
+        if (sameWeek(task.dueTime.date, calendarDate)) {
             val x = textBuffer + ((daySize + DAY_PADDING) * (task.dueTime.date.get(Calendar.DAY_OF_WEEK) - 1))
             val relaX = x - offset.x
             if (0 >= relaX && relaX + daySize > 0) {
@@ -117,6 +115,8 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
             } else {
                 null
             }
+        } else {
+            null
         }
     }
 

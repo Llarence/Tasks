@@ -176,43 +176,82 @@ fun app() {
 
             val day = if (isEvent) {
                 last as CalendarEvent
-                last.event.time.date.get(Calendar.DAY_OF_WEEK)
+                last.event.time.date.get(Calendar.DAY_OF_MONTH)
             } else if (isTask) {
                 last as CalendarTask
-                last.task.dueTime.date.get(Calendar.DAY_OF_WEEK)
+                last.task.dueTime.date.get(Calendar.DAY_OF_MONTH)
             } else {
                 0
             }
 
             RestrictedTextField(day, Int::toString, {
-                val int = it.toIntOrNull()
-                if (int == null) {
-                    null
-                } else {
-                    if (int in 1..7) {
-                        int
-                    } else {
-                        null
-                    }
-                }
+                it.toIntOrNull()
             }, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time.date.set(Calendar.DAY_OF_WEEK, it)
+                    last.event.time.date.set(Calendar.DAY_OF_MONTH, it)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime.date.set(Calendar.DAY_OF_WEEK, it)
+                    last.task.dueTime.date.set(Calendar.DAY_OF_MONTH, it)
+                }
+                calendarObjects.forceUpdate()
+            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+
+            val month = if (isEvent) {
+                last as CalendarEvent
+                last.event.time.date.get(Calendar.MONTH)
+            } else if (isTask) {
+                last as CalendarTask
+                last.task.dueTime.date.get(Calendar.MONTH)
+            } else {
+                0
+            }
+
+            RestrictedTextField(month, Int::toString, {
+                it.toIntOrNull()
+            }, {
+                if (isEvent) {
+                    last as CalendarEvent
+                    last.event.time.date.set(Calendar.MONTH, it)
+                } else if (isTask) {
+                    last as CalendarTask
+                    last.task.dueTime.date.set(Calendar.MONTH, it)
+                }
+                calendarObjects.forceUpdate()
+            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+
+            val year = if (isEvent) {
+                last as CalendarEvent
+                last.event.time.date.get(Calendar.YEAR)
+            } else if (isTask) {
+                last as CalendarTask
+                last.task.dueTime.date.get(Calendar.YEAR)
+            } else {
+                0
+            }
+
+            RestrictedTextField(year, Int::toString, {
+                it.toIntOrNull()
+            }, {
+                if (isEvent) {
+                    last as CalendarEvent
+                    last.event.time.date.set(Calendar.YEAR, it)
+                } else if (isTask) {
+                    last as CalendarTask
+                    last.task.dueTime.date.set(Calendar.YEAR, it)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         }
 
         Column {
-            var calendarDate by remember {
+            val calendarDateState = remember {
                 val currCalendar = Calendar.getInstance()
                 currCalendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
                 mutableStateOf(currCalendar)
             }
+
+            var calendarDate by calendarDateState
 
             // TODO: See if there is way to modify the date without copying
             Row {
@@ -235,7 +274,7 @@ fun app() {
                 Text("${monthToName(calendarDate.get(Calendar.MONTH))} ${calendarDate.get(Calendar.DAY_OF_MONTH)}, ${calendarDate.get(Calendar.YEAR)}")
             }
 
-            RenderedCalendar(calendarObjects, calendarDate, Modifier.fillMaxSize())
+            RenderedCalendar(calendarObjects, calendarDateState, Modifier.fillMaxSize())
         }
     }
 }

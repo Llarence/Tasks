@@ -31,9 +31,10 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 // TODO: Show calendarObjects covered by other calendarObjects
 // TODO: Make this render based on calendar so special time rules apply (if necessary)
 // The last event is always the selected one
+// Needs dateState because it won't update the modifier without it
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: Calendar, modifier: Modifier = Modifier) {
+fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, dateState: MutableState<Calendar>, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
 
     var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
@@ -43,6 +44,8 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, date: C
 
     var dragging by remember { mutableStateOf(false) }
     var dragOffset by remember { mutableStateOf(0f) }
+
+    val date by dateState
 
     Canvas(
         modifier
