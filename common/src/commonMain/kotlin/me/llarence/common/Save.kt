@@ -3,8 +3,75 @@ package me.llarence.common
 import org.json.JSONArray
 import org.json.JSONObject
 
-fun toJson(tasks: List<Task>, events: List<Event>): JSONObject {
+fun toCalendarObjectsJson(calendarObjects: List<CalendarObject>): JSONObject {
+    val events = mutableListOf<Event>()
+    val tasks = mutableListOf<Task>()
+
+    val calendarObjectsJson = JSONArray()
+
+    for (calendarObject in calendarObjects) {
+        val calendarObjectJson = calendarObject.toJson()
+
+        if (calendarObject is CalendarEvent) {
+            events.add(calendarObject.event)
+            calendarObjectJson.put("event", calendarObject.event)
+        } else if (calendarObject is CalendarTask) {
+            tasks.add(calendarObject.task)
+            calendarObjectJson.put("task", calendarObject.task)
+        } else {
+            throw IllegalArgumentException()
+        }
+
+        calendarObjectsJson.put(calendarObject.toJson())
+    }
+
+    val json = toEventsAndTasksJson(events, tasks)
+    json.put("calendarObjects", calendarObjectsJson)
+
+    return json
+}
+
+fun fromCalendarObjectsJson(json: JSONObject): List<CalendarObject> {
+    val calendarObjects = mutableListOf<CalendarObject>()
+
+    val out = fromEventsAndTasksJson(json)
+    val events = out.first
+    val tasks = out.second
+
+    for (calendarObjectJson in json.getJSONArray("calendarObjects")) {
+        calendarObjectJson as JSONObject
+
+        val eventIndex = calendarObjectJson.opt("event")
+        if (eventIndex is Int) {
+            calendarObjects.add(CalendarEvent(events[eventIndex], calendarObjectJson))
+            continue
+        }
+
+        val taskIndex = calendarObjectJson.opt("task")
+        if (taskIndex is Int) {
+            calendarObjects.add(CalendarTask(tasks[taskIndex], calendarObjectJson))
+            continue
+        }
+
+        throw IllegalArgumentException()
+    }
+
+    return calendarObjects
+}
+
+fun toEventsAndTasksJson(events: List<Event>, tasks: List<Task>): JSONObject {
     val json = JSONObject()
+
+    val eventsJson = JSONArray()
+    for (event in events) {
+        val eventJson = event.toJson()
+
+        if (event.task != null) {
+            eventJson.put("task", tasks.indexOf(event.task))
+        }
+
+        eventsJson.put(eventJson)
+    }
 
     val tasksJson = JSONArray()
     for (task in tasks) {
@@ -29,35 +96,31 @@ fun toJson(tasks: List<Task>, events: List<Event>): JSONObject {
         tasksJson.put(taskJson)
     }
 
-    val eventsJson = JSONArray()
-    for (event in events) {
-        val eventJson = event.toJson()
-
-        if (event.task != null) {
-            eventJson.put("task", tasks.indexOf(event.task))
-        }
-
-        eventsJson.put(eventJson)
-    }
-
-    json.put("tasks", tasksJson)
     json.put("events", eventsJson)
+    json.put("tasks", tasksJson)
 
     return json
 }
 
-fun fromJson(json: JSONObject): Pair<List<Task>, List<Event>> {
-    val tasks = mutableListOf<Task>()
+fun fromEventsAndTasksJson(json: JSONObject): Pair<List<Event>, List<Task>> {
     val events = mutableListOf<Event>()
+    val tasks = mutableListOf<Task>()
+
+    val eventsJson = json.getJSONArray("events")
+    for (eventJson in eventsJson) {
+        events.add(Event(eventJson as JSONObject))
+    }
 
     val tasksJson = json.getJSONArray("tasks")
     for (taskJson in tasksJson) {
         tasks.add(Task(taskJson as JSONObject))
     }
 
-    val eventsJson = json.getJSONArray("events")
-    for (eventJson in eventsJson) {
-        events.add(Event(eventJson as JSONObject))
+    for (i in events.indices) {
+        val index = eventsJson.getJSONObject(i).opt("event")
+        if (index is Int) {
+            events[i].task = tasks[index]
+        }
     }
 
     for (i in tasks.indices) {
@@ -78,12 +141,5 @@ fun fromJson(json: JSONObject): Pair<List<Task>, List<Event>> {
         }
     }
 
-    for (i in events.indices) {
-        val index = eventsJson.getJSONObject(i).opt("event")
-        if (index is Int) {
-            events[i].task = tasks[index]
-        }
-    }
-
-    return Pair(tasks, events)
+    return Pair(events, tasks)
 }

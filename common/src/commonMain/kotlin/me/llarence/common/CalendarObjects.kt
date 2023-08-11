@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.unit.dp
+import org.json.JSONObject
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -23,6 +24,7 @@ fun sameWeek(date1: Calendar, date2: Calendar): Boolean {
 
 // TODO: Only render on the week that the calendarObject is on
 // TODO: Move some of the math into functions
+// Task and Event are not in the json
 abstract class CalendarObject {
     // Kinda dumb but I want the scope mostly for .toPx()
     // It feels like less should be passed into these functions
@@ -30,6 +32,8 @@ abstract class CalendarObject {
     abstract val preDrawFun: DrawScope.(Calendar, Float, Float, Float) -> Unit
     abstract val drawFun: DrawScope.(Calendar, Boolean, Float, Float, Float) -> Unit
     abstract val dragFun: PointerInputScope.(Calendar, Offset, Float, Float, Float, Float) -> Unit
+
+    abstract fun toJson(): JSONObject
 
     fun inBounds(pointerInputScope: PointerInputScope, calendarDate: Calendar, offset: Offset, textBuffer: Float, daySize: Float, scroll: Float): Float? {
         return inBoundsFun(pointerInputScope, calendarDate, offset, textBuffer, daySize, scroll)
@@ -48,9 +52,19 @@ abstract class CalendarObject {
     }
 }
 
-abstract class ColorableCalendarObject(var color: Color) : CalendarObject()
+abstract class ColorableCalendarObject(var color: Color) : CalendarObject() {
+    override fun toJson(): JSONObject {
+        val json = JSONObject()
+
+        json.put("color", color.value.toLong())
+
+        return json
+    }
+}
 
 class CalendarEvent(val event: Event, inColor: Color) : ColorableCalendarObject(inColor) {
+    constructor(event: Event, json: JSONObject) : this(event, Color(json.getLong("color").toULong()))
+
     override val inBoundsFun: PointerInputScope.(Calendar, Offset, Float, Float, Float) -> Float? = { calendarDate, offset, textBuffer, daySize, scroll ->
         if (sameWeek(event.time.date, calendarDate)) {
             val x = textBuffer + ((daySize + DAY_PADDING) * (event.time.date.get(Calendar.DAY_OF_WEEK) - 1))
@@ -100,6 +114,8 @@ class CalendarEvent(val event: Event, inColor: Color) : ColorableCalendarObject(
 }
 
 class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inColor) {
+    constructor(task: Task, json: JSONObject) : this(task, Color(json.getLong("color").toULong()))
+
     override val inBoundsFun: PointerInputScope.(Calendar, Offset, Float, Float, Float) -> Float? = { calendarDate, offset, textBuffer, daySize, scroll ->
         if (sameWeek(task.dueTime.date, calendarDate)) {
             val x = textBuffer + ((daySize + DAY_PADDING) * (task.dueTime.date.get(Calendar.DAY_OF_WEEK) - 1))
@@ -192,6 +208,10 @@ class CalendarDummy : CalendarObject() {
     }
 
     override val dragFun: PointerInputScope.(Calendar, Offset, Float, Float, Float, Float) -> Unit = { _, _, _, _, _, _ ->
+        throw NotImplementedError()
+    }
+
+    override fun toJson(): JSONObject {
         throw NotImplementedError()
     }
 }
