@@ -8,49 +8,47 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import java.util.*
+import kotlinx.datetime.*
+import kotlinx.datetime.TimeZone
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.nanoseconds
 
 fun randomColor(): Color {
     return Color(Random.nextBits(8), Random.nextBits(8), Random.nextBits(8))
 }
 
-fun monthToName(month: Int): String {
-    return when(month) {
-        0 -> "January"
-        1 -> "February"
-        2 -> "March"
-        3 -> "April"
-        4 -> "May"
-        5 -> "June"
-        6 -> "July"
-        7 -> "August"
-        8 -> "September"
-        9 -> "October"
-        10 -> "November"
-        11 -> "December"
-        else -> throw IllegalArgumentException()
-    }
+fun LocalDateTime.copy(year: Int = this.year, monthNumber: Int = this.monthNumber, dayOfMonth: Int = this.dayOfMonth, hour: Int = this.hour, minute: Int = this.minute, second: Int = this.second, nanosecond: Int = this.nanosecond): LocalDateTime {
+    return LocalDateTime(year, monthNumber, dayOfMonth, hour, minute, second, nanosecond)
+}
+
+fun Instant.getFloatHour(timeZone: TimeZone): Float {
+    return (this - toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone)).inWholeNanoseconds / HOURS_IN_NANO
+}
+
+fun Instant.withFloatHour(value: Float, timeZone: TimeZone): Instant {
+    return toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone) + (value * HOURS_IN_NANO).toLong().nanoseconds
 }
 
 // TODO: Check stuff to make sure it complies with compose
 // TODO: Add removing (it will mean has grabbed has to be set so false and renamed)
+// TODO: Cache toLocalDatetime
 @Composable
 fun app() {
+    val timeZone = remember { TimeZone.currentSystemDefault() }
+
     Row {
         val calendarObjects = remember { mutableStateListOf<CalendarObject>() }
 
         Column {
             Button({
-                val currCalendar = Calendar.getInstance()
-                calendarObjects.add(0, CalendarEvent(Event(Time(currCalendar, currCalendar.get(Calendar.HOUR_OF_DAY).toFloat()), DEFAULT_HOURS, 0, null), randomColor()))
+                calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), DEFAULT_HOURS, 0, null), randomColor()))
             }) {
                 Text("New Event")
             }
 
             Button({
-                val currCalendar = Calendar.getInstance()
-                calendarObjects.add(0, CalendarTask(Task(DEFAULT_HOURS, mutableListOf(), mutableListOf(), mutableListOf(), Time(currCalendar, currCalendar.get(Calendar.HOUR_OF_DAY).toFloat()), null), randomColor()))
+                calendarObjects.add(0, CalendarTask(Task(DEFAULT_HOURS, mutableListOf(), mutableListOf(), mutableListOf(), Clock.System.now(), null), randomColor()))
             }) {
                 Text("New Task")
             }
@@ -131,6 +129,7 @@ fun app() {
                 }
             }
 
+            // TODO: Stop crashing on invalid values
             Switch(checked, {
                 if (it) {
                     if (last is CalendarTask) {
@@ -144,10 +143,10 @@ fun app() {
             val isTask = last is CalendarTask
             val hour = if (isEvent) {
                 last as CalendarEvent
-                last.event.time.hour
+                last.event.time.getFloatHour(timeZone)
             } else if (isTask) {
                 last as CalendarTask
-                last.task.dueTime.hour
+                last.task.dueTime.getFloatHour(timeZone)
             } else {
                 0f
             }
@@ -166,20 +165,20 @@ fun app() {
             }, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time.hour = it
+                    last.event.time.withFloatHour(it, timeZone)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime.hour = it
+                    last.task.dueTime.withFloatHour(it, timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent || isTask, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
             val day = if (isEvent) {
                 last as CalendarEvent
-                last.event.time.date.get(Calendar.DAY_OF_MONTH)
+                last.event.time.toLocalDateTime(timeZone).dayOfMonth
             } else if (isTask) {
                 last as CalendarTask
-                last.task.dueTime.date.get(Calendar.DAY_OF_MONTH)
+                last.task.dueTime.toLocalDateTime(timeZone).dayOfMonth
             } else {
                 0
             }
@@ -189,20 +188,20 @@ fun app() {
             }, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time.date.set(Calendar.DAY_OF_MONTH, it)
+                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(dayOfMonth = day).toInstant(timeZone)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime.date.set(Calendar.DAY_OF_MONTH, it)
+                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(dayOfMonth = day).toInstant(timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
             val month = if (isEvent) {
                 last as CalendarEvent
-                last.event.time.date.get(Calendar.MONTH)
+                last.event.time.toLocalDateTime(timeZone).monthNumber
             } else if (isTask) {
                 last as CalendarTask
-                last.task.dueTime.date.get(Calendar.MONTH)
+                last.task.dueTime.toLocalDateTime(timeZone).monthNumber
             } else {
                 0
             }
@@ -212,20 +211,20 @@ fun app() {
             }, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time.date.set(Calendar.MONTH, it)
+                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(monthNumber = month).toInstant(timeZone)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime.date.set(Calendar.MONTH, it)
+                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(monthNumber = month).toInstant(timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
             val year = if (isEvent) {
                 last as CalendarEvent
-                last.event.time.date.get(Calendar.YEAR)
+                last.event.time.toLocalDateTime(timeZone).year
             } else if (isTask) {
                 last as CalendarTask
-                last.task.dueTime.date.get(Calendar.YEAR)
+                last.task.dueTime.toLocalDateTime(timeZone).year
             } else {
                 0
             }
@@ -235,46 +234,42 @@ fun app() {
             }, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time.date.set(Calendar.YEAR, it)
+                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(year = year).toInstant(timeZone)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime.date.set(Calendar.YEAR, it)
+                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(year = year).toInstant(timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         }
 
         Column {
-            val calendarDateState = remember {
-                val currCalendar = Calendar.getInstance()
-                currCalendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-                mutableStateOf(currCalendar)
+            val calendarTimeState = remember {
+                val datetime = Clock.System.now().toLocalDateTime(timeZone)
+                mutableStateOf(datetime.copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone))
             }
 
-            var calendarDate by calendarDateState
+            var calendarTime by calendarTimeState
 
             // TODO: See if there is way to modify the date without copying
             Row {
                 Button({
-                    val newCalendarDate = calendarDate.clone() as Calendar
-                    newCalendarDate.add(Calendar.WEEK_OF_YEAR, -1)
-                    calendarDate = newCalendarDate
+                    calendarTime -= 7.days
                 }) {
                     Text("Previous Week")
                 }
 
                 Button({
-                    val newCalendarDate = calendarDate.clone() as Calendar
-                    newCalendarDate.add(Calendar.WEEK_OF_YEAR, 1)
-                    calendarDate = newCalendarDate
+                    calendarTime += 7.days
                 }) {
                     Text("Next Week")
                 }
 
-                Text("${monthToName(calendarDate.get(Calendar.MONTH))} ${calendarDate.get(Calendar.DAY_OF_MONTH)}, ${calendarDate.get(Calendar.YEAR)}")
+                val calendarDatetime = calendarTime.toLocalDateTime(timeZone)
+                Text("${calendarDatetime.month} ${calendarDatetime.dayOfMonth}, ${calendarDatetime.year}")
             }
 
-            RenderedCalendar(calendarObjects, calendarDateState, Modifier.fillMaxSize())
+            RenderedCalendar(calendarObjects, calendarTimeState, timeZone, Modifier.fillMaxSize())
         }
     }
 }

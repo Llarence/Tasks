@@ -15,6 +15,10 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.max
 import kotlin.math.min
 import java.util.Calendar
@@ -28,13 +32,14 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
     this.removeAt(0)
 }
 
+// TODO: Check if timezone should be state
 // TODO: Show calendarObjects covered by other calendarObjects
 // TODO: Make this render based on calendar so special time rules apply (if necessary)
 // The last event is always the selected one
 // Needs dateState because it won't update the modifier without it
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, dateState: MutableState<Calendar>, modifier: Modifier = Modifier) {
+fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instantState: MutableState<Instant>, timeZone: TimeZone, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
 
     var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
@@ -45,7 +50,12 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, dateSta
     var dragging by remember { mutableStateOf(false) }
     var dragOffset by remember { mutableStateOf(0f) }
 
-    val date by dateState
+    val instant by instantState
+    val date = instant.toLocalDateTime(timeZone)
+
+    if (date.nanosecond != 0 || date.second != 0 || date.minute != 0 || date.hour != 0) {
+        throw IllegalArgumentException()
+    }
 
     Canvas(
         modifier
@@ -70,7 +80,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, dateSta
 
                     for (i in (calendarObjects.size - 1) downTo 0) {
                         val calendarObject = calendarObjects[i]
-                        val offset = calendarObject.inBounds(this, date, startPos, textBuffer, daySize, scroll)
+                        val offset = calendarObject.inBounds(this, instant, startPos, textBuffer, daySize, scroll)
                         if (offset != null) {
                             dragging = true
 
@@ -96,7 +106,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, dateSta
                     } else {
                         val calendarObject = calendarObjects.lastOrNull()
                         if (calendarObject != null) {
-                            calendarObject.drag(this, date, change.position, dragOffset, textBuffer, daySize, scroll)
+                            calendarObject.drag(this, instant, change.position, dragOffset, textBuffer, daySize, scroll)
                             calendarObjects.forceUpdate()
                         }
                     }
@@ -141,11 +151,11 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, dateSta
         }
 
         for (i in calendarObjects.indices) {
-            calendarObjects[i].preDraw(this, date, textBuffer, daySize, scroll)
+            calendarObjects[i].preDraw(this, instant, textBuffer, daySize, scroll)
         }
 
         for (i in calendarObjects.indices) {
-            calendarObjects[i].draw(this, date, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll)
+            calendarObjects[i].draw(this, instant, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll)
         }
     }
 }

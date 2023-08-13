@@ -13,16 +13,16 @@ fun toCalendarObjectsJson(calendarObjects: List<CalendarObject>): JSONObject {
         val calendarObjectJson = calendarObject.toJson()
 
         if (calendarObject is CalendarEvent) {
+            calendarObjectJson.put("event", events.size)
             events.add(calendarObject.event)
-            calendarObjectJson.put("event", calendarObject.event)
         } else if (calendarObject is CalendarTask) {
+            calendarObjectJson.put("task", tasks.size)
             tasks.add(calendarObject.task)
-            calendarObjectJson.put("task", calendarObject.task)
         } else {
             throw IllegalArgumentException()
         }
 
-        calendarObjectsJson.put(calendarObject.toJson())
+        calendarObjectsJson.put(calendarObjectJson)
     }
 
     val json = toEventsAndTasksJson(events, tasks)
