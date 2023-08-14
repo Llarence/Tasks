@@ -115,7 +115,7 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
         val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS - 1)
         val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - event.duration)
 
-        event.time = time + day.days + (hour / HOURS_IN_NANO).toLong().nanoseconds
+        event.time = time + day.days + (hour * NANOS_IN_HOUR).toLong().nanoseconds
     }
 }
 
@@ -207,7 +207,7 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
         val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS - 1)
         val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - TASK_HOURS)
 
-        task.dueTime = time + day.days + (hour / HOURS_IN_NANO).toLong().nanoseconds
+        task.dueTime = time + day.days + (hour * NANOS_IN_HOUR).toLong().nanoseconds
     }
 }
 

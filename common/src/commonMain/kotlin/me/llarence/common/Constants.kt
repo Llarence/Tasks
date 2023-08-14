@@ -26,4 +26,5 @@ const val SCROLL_SPEED = 0.5f
 const val PATH_STRENGTH = 100
 const val PATH_INTERVALS = 10f
 
-const val HOURS_IN_NANO = 1 / 60f / 60f / 1000f / 1000f
+const val NANOS_IN_HOUR =  60f * 60f * 1000f * 1000f * 1000f
+const val HOURS_IN_NANO = 1 / NANOS_IN_HOUR

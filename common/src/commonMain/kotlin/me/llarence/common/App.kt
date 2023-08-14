@@ -23,11 +23,11 @@ fun LocalDateTime.copy(year: Int = this.year, monthNumber: Int = this.monthNumbe
 }
 
 fun Instant.getFloatHour(timeZone: TimeZone): Float {
-    return (this - toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone)).inWholeNanoseconds / HOURS_IN_NANO
+    return (this - toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone)).inWholeNanoseconds * HOURS_IN_NANO
 }
 
 fun Instant.withFloatHour(value: Float, timeZone: TimeZone): Instant {
-    return toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone) + (value * HOURS_IN_NANO).toLong().nanoseconds
+    return toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone) + (value * NANOS_IN_HOUR).toLong().nanoseconds
 }
 
 // TODO: Check stuff to make sure it complies with compose
@@ -151,18 +151,7 @@ fun app() {
                 0f
             }
 
-            RestrictedTextField(hour, Float::toString, {
-                val float = it.toFloatOrNull()
-                if (float == null) {
-                    null
-                } else {
-                    if (float >= 0f && float <= 24f - duration) {
-                        float
-                    } else {
-                        null
-                    }
-                }
-            }, {
+            RestrictedTextField(hour, Float::toString, String::toFloatOrNull, {
                 if (isEvent) {
                     last as CalendarEvent
                     last.event.time.withFloatHour(it, timeZone)
@@ -183,15 +172,13 @@ fun app() {
                 0
             }
 
-            RestrictedTextField(day, Int::toString, {
-                it.toIntOrNull()
-            }, {
+            RestrictedTextField(day, Int::toString, String::toIntOrNull, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(dayOfMonth = day).toInstant(timeZone)
+                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(dayOfMonth = it).toInstant(timeZone)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(dayOfMonth = day).toInstant(timeZone)
+                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(dayOfMonth = it).toInstant(timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
@@ -206,15 +193,13 @@ fun app() {
                 0
             }
 
-            RestrictedTextField(month, Int::toString, {
-                it.toIntOrNull()
-            }, {
+            RestrictedTextField(month, Int::toString, String::toIntOrNull, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(monthNumber = month).toInstant(timeZone)
+                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(monthNumber = it).toInstant(timeZone)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(monthNumber = month).toInstant(timeZone)
+                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(monthNumber = it).toInstant(timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
@@ -229,15 +214,13 @@ fun app() {
                 0
             }
 
-            RestrictedTextField(year, Int::toString, {
-                it.toIntOrNull()
-            }, {
+            RestrictedTextField(year, Int::toString, String::toIntOrNull, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(year = year).toInstant(timeZone)
+                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(year = it).toInstant(timeZone)
                 } else if (isTask) {
                     last as CalendarTask
-                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(year = year).toInstant(timeZone)
+                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(year = it).toInstant(timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
