@@ -11,14 +11,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDateTime
 import org.json.JSONObject
-import java.sql.Time
-import java.util.*
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.nanoseconds
 
@@ -77,7 +73,7 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
                 val dayDiff = diff - diff.inWholeDays.days
                 val y = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll
                 val relaY = y - offset.y
-                if (0 >= relaY && relaY + (event.duration * HOUR_SIZE).dp.toPx() > 0) {
+                if (0 >= relaY && relaY + (event.duration.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() > 0) {
                     relaY
                 } else {
                     null
@@ -105,17 +101,17 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
             val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays)
             val dayDiff = diff - diff.inWholeDays.days
             val y = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll
-            val height = (event.duration * HOUR_SIZE).dp.toPx()
+            val height = (event.duration.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx()
 
             drawRoundRect(currColor, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.dp.toPx()))
         }
     }
 
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
-        val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS - 1)
-        val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - event.duration)
+        val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS_IN_WEEK - 1)
+        val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), HOURS_IN_DAY - (event.duration.inWholeNanoseconds * HOURS_IN_NANO))
 
-        event.time = time + day.days + (hour * NANOS_IN_HOUR).toLong().nanoseconds
+        event.time = time + day.days + hour.hours
     }
 }
 
@@ -204,10 +200,10 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
     }
 
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
-        val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS - 1)
-        val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), 24f - TASK_HOURS)
+        val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS_IN_WEEK - 1)
+        val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), HOURS_IN_DAY - TASK_HOURS)
 
-        task.dueTime = time + day.days + (hour * NANOS_IN_HOUR).toLong().nanoseconds
+        task.dueTime = time + day.days + hour.hours
     }
 }
 

@@ -12,6 +12,7 @@ import kotlinx.datetime.*
 import kotlinx.datetime.TimeZone
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.nanoseconds
 
 fun randomColor(): Color {
@@ -42,13 +43,13 @@ fun app() {
 
         Column {
             Button({
-                calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), DEFAULT_HOURS, 0, null), randomColor()))
+                calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), DEFAULT_DURATION, 0, null), randomColor()))
             }) {
                 Text("New Event")
             }
 
             Button({
-                calendarObjects.add(0, CalendarTask(Task(DEFAULT_HOURS, mutableListOf(), mutableListOf(), mutableListOf(), Clock.System.now(), null), randomColor()))
+                calendarObjects.add(0, CalendarTask(Task(DEFAULT_DURATION, mutableListOf(0), mutableListOf(), mutableListOf(), Clock.System.now(), null), randomColor()))
             }) {
                 Text("New Task")
             }
@@ -59,10 +60,10 @@ fun app() {
                 last as CalendarEvent
                 last.event.duration
             } else {
-                0f
+                0.nanoseconds
             }
 
-            RestrictedTextField(duration, Float::toString, String::toFloatOrNull, {
+            RestrictedTextField(duration, { (it.inWholeNanoseconds * HOURS_IN_NANO).toString() }, { it.toFloatOrNull()?.hours }, {
                 last as CalendarEvent
                 last.event.duration = it
                 calendarObjects.forceUpdate()
@@ -231,6 +232,7 @@ fun app() {
                 val datetime = Clock.System.now().toLocalDateTime(timeZone)
                 mutableStateOf(datetime.copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone))
             }
+            val calendarObjectsGenerated = remember { mutableStateListOf<CalendarObject>() }
 
             var calendarTime by calendarTimeState
 
@@ -248,11 +250,24 @@ fun app() {
                     Text("Next Week")
                 }
 
+                Button({
+                    val eventsAndTasks = calendarObjectsToEventsAndTasks(calendarObjects)
+                    val locationTimes = LocationTimes()
+                    locationTimes.set(0, 0, 20.minutes)
+
+                    calendarObjectsGenerated.clear()
+                    for (event in autofillMinTime(Clock.System.now(), eventsAndTasks.first, eventsAndTasks.second, locationTimes)) {
+                        calendarObjectsGenerated.add(CalendarEvent(event, randomColor()))
+                    }
+                }) {
+                    Text("Auto Fill")
+                }
+
                 val calendarDatetime = calendarTime.toLocalDateTime(timeZone)
                 Text("${calendarDatetime.month} ${calendarDatetime.dayOfMonth}, ${calendarDatetime.year}")
             }
 
-            RenderedCalendar(calendarObjects, calendarTimeState, timeZone, Modifier.fillMaxSize())
+            RenderedCalendar(calendarObjects, calendarObjectsGenerated, calendarTimeState, timeZone, Modifier.fillMaxSize())
         }
     }
 }

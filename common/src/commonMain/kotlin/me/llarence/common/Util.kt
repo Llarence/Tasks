@@ -3,6 +3,8 @@ package me.llarence.common
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
+import org.json.JSONArray
+import org.json.JSONObject
 
 @Composable
 fun <T> RestrictedTextField(value: T, valueToText: (T) -> String, textToValue: (String) -> T?, onValueChange: (T) -> Unit, enabled: Boolean = true, keyboardOptions: KeyboardOptions = KeyboardOptions()) {
@@ -27,4 +29,21 @@ fun <T> RestrictedTextField(value: T, valueToText: (T) -> String, textToValue: (
             onValueChange(currValue)
         }
     }, enabled = enabled, keyboardOptions = keyboardOptions)
+}
+
+fun calendarObjectsToEventsAndTasks(calendarObjects: List<CalendarObject>): Pair<List<Event>, List<Task>> {
+    val events = mutableListOf<Event>()
+    val tasks = mutableListOf<Task>()
+
+    for (calendarObject in calendarObjects) {
+        if (calendarObject is CalendarEvent) {
+            events.add(calendarObject.event)
+        } else if (calendarObject is CalendarTask) {
+            tasks.add(calendarObject.task)
+        } else {
+            throw IllegalArgumentException()
+        }
+    }
+
+    return Pair(events, tasks)
 }

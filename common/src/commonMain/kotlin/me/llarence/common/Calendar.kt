@@ -16,12 +16,10 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.max
 import kotlin.math.min
-import java.util.Calendar
 
 operator fun Color.times(value: Float): Color {
     return Color(red * value, green * value, blue * value)
@@ -39,7 +37,7 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 // Needs dateState because it won't update the modifier without it
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instantState: MutableState<Instant>, timeZone: TimeZone, modifier: Modifier = Modifier) {
+fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calendarObjectsGenerated: SnapshotStateList<CalendarObject>, weekInstantState: MutableState<Instant>, timeZone: TimeZone, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
 
     var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
@@ -50,8 +48,8 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instant
     var dragging by remember { mutableStateOf(false) }
     var dragOffset by remember { mutableStateOf(0f) }
 
-    val instant by instantState
-    val date = instant.toLocalDateTime(timeZone)
+    val weekInstant by weekInstantState
+    val date = weekInstant.toLocalDateTime(timeZone)
 
     if (date.nanosecond != 0 || date.second != 0 || date.minute != 0 || date.hour != 0) {
         throw IllegalArgumentException()
@@ -80,7 +78,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instant
 
                     for (i in (calendarObjects.size - 1) downTo 0) {
                         val calendarObject = calendarObjects[i]
-                        val offset = calendarObject.inBounds(this, instant, startPos, textBuffer, daySize, scroll)
+                        val offset = calendarObject.inBounds(this, weekInstant, startPos, textBuffer, daySize, scroll)
                         if (offset != null) {
                             dragging = true
 
@@ -90,6 +88,22 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instant
 
                             dragOffset = offset
                             break
+                        }
+                    }
+
+                    if (!dragging) {
+                        for (i in (calendarObjectsGenerated.size - 1) downTo 0) {
+                            val calendarObject = calendarObjectsGenerated[i]
+                            val offset = calendarObject.inBounds(this, weekInstant, startPos, textBuffer, daySize, scroll)
+                            if (offset != null) {
+                                dragging = true
+
+                                calendarObjectsGenerated.removeAt(i)
+                                calendarObjects.add(calendarObject)
+
+                                dragOffset = offset
+                                break
+                            }
                         }
                     }
                 },
@@ -106,7 +120,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instant
                     } else {
                         val calendarObject = calendarObjects.lastOrNull()
                         if (calendarObject != null) {
-                            calendarObject.drag(this, instant, change.position, dragOffset, textBuffer, daySize, scroll)
+                            calendarObject.drag(this, weekInstant, change.position, dragOffset, textBuffer, daySize, scroll)
                             calendarObjects.forceUpdate()
                         }
                     }
@@ -117,13 +131,13 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instant
         drawRect(Color.Cyan)
 
         var textWidth = 0
-        for (i in 0 until HOURS) {
+        for (i in 0 until HOURS_IN_DAY) {
             val text = "$i.00"
 
             if (i == 0) {
                 // Maybe having scroll changed here doesn't make a lot of sense
                 val textMeasure = textMeasurer.measure(AnnotatedString(text))
-                scroll = min(max(scroll, -(HOURS * HOUR_SIZE).dp.toPx() + size.height), textMeasure.size.height / 2f)
+                scroll = min(max(scroll, -(HOURS_IN_DAY * HOUR_SIZE).dp.toPx() + size.height), textMeasure.size.height / 2f)
             }
 
             val textMeasure = textMeasurer.measure(AnnotatedString(text))
@@ -138,24 +152,32 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, instant
         }
 
         textBuffer = textWidth + TEXT_PADDING
-        daySize = max((size.width + DAY_PADDING - textBuffer) / DAYS - DAY_PADDING, 0f)
+        daySize = max((size.width + DAY_PADDING - textBuffer) / DAYS_IN_WEEK - DAY_PADDING, 0f)
 
-        for (i in 0 until DAYS) {
+        for (i in 0 until DAYS_IN_WEEK) {
             val startX = textBuffer + ((daySize + DAY_PADDING) * i)
-            drawRect(Color.LightGray, Offset(startX.dp.toPx(), scroll), Size(daySize.dp.toPx(), (HOURS * HOUR_SIZE).dp.toPx()))
+            drawRect(Color.LightGray, Offset(startX.dp.toPx(), scroll), Size(daySize.dp.toPx(), (HOURS_IN_DAY * HOUR_SIZE).dp.toPx()))
         }
 
-        for (i in 0 until HOURS) {
+        for (i in 0 until HOURS_IN_DAY) {
             val y = (HOUR_SIZE * i).dp.toPx() + scroll
             drawLine(Color.Gray, Offset(textBuffer, y), Offset(size.width, y))
         }
 
-        for (i in calendarObjects.indices) {
-            calendarObjects[i].preDraw(this, instant, textBuffer, daySize, scroll)
+        for (i in calendarObjectsGenerated.indices) {
+            calendarObjectsGenerated[i].preDraw(this, weekInstant, textBuffer, daySize, scroll)
         }
 
         for (i in calendarObjects.indices) {
-            calendarObjects[i].draw(this, instant, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll)
+            calendarObjects[i].preDraw(this, weekInstant, textBuffer, daySize, scroll)
+        }
+
+        for (i in calendarObjectsGenerated.indices) {
+            calendarObjectsGenerated[i].draw(this, weekInstant, false, textBuffer, daySize, scroll)
+        }
+
+        for (i in calendarObjects.indices) {
+            calendarObjects[i].draw(this, weekInstant, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll)
         }
     }
 }
