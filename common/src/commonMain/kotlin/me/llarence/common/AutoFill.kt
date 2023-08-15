@@ -18,17 +18,17 @@ fun firstTimeAndLocation(task: Task, startTime: Instant, events: List<Event>, lo
         val bestLocationTimeTo = locationTimes.get(bestLocationForEvent, event.location)
 
         val bestStartForEvent = event.time + event.duration + bestLocationTimeTo
-        if (event.time + event.duration + bestLocationTimeTo > bestStartTime) {
+        if (event.time + event.duration + bestLocationTimeTo < bestStartTime) {
             break
         }
 
         val bestLocationTimeFrom = task.locations.minOf { locationTimes.get(event.location, it) }
-        if (event.time < bestEndTime + bestLocationTimeFrom) {
+        if (event.time > bestEndTime + bestLocationTimeFrom) {
             continue
         }
 
         bestStartTime = bestStartForEvent
-        bestEndTime = bestStartTime + task.duration
+        bestEndTime = bestStartForEvent + task.duration
         bestLocation = bestLocationForEvent
 
         if (bestEndTime > endTime) {
@@ -36,7 +36,7 @@ fun firstTimeAndLocation(task: Task, startTime: Instant, events: List<Event>, lo
         }
     }
 
-    return Pair(startTime, bestLocation)
+    return Pair(bestStartTime, bestLocation)
 }
 
 fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, locationTimes: LocationTimes): List<Event> {
@@ -48,25 +48,26 @@ fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, l
     tasksTodoByLength.sortBy { it.duration }
 
     while (tasksTodoByLength.isNotEmpty()) {
-        val allEvents = (events + newEvents).sortedBy { it.time }
+        val allEvents = (eventsByTime + newEvents).sortedBy { it.time }
 
         var bestTimeAndLocation = Pair(Instant.DISTANT_FUTURE, 0)
         var bestTask: Task? = null
-        var index = -1
+        var bestIndex = -1
         for (i in tasksTodoByLength.indices) {
-            val task = tasks[i]
+            val task = tasksTodoByLength[i]
+            // Having bestTimeAndLocation.first as the endTime doesn't cutoff it being the same
             val timeAndLocation = firstTimeAndLocation(task, currTime, allEvents, locationTimes, bestTimeAndLocation.first)
             if (timeAndLocation != null && timeAndLocation.first < bestTimeAndLocation.first) {
                 bestTimeAndLocation = timeAndLocation
                 bestTask = task
-                index = i
+                bestIndex = i
             }
         }
 
         val event = Event(bestTimeAndLocation.first, bestTask!!.duration, bestTimeAndLocation.second, bestTask)
         bestTask.event = event
         newEvents.add(event)
-        tasksTodoByLength.removeAt(index)
+        tasksTodoByLength.removeAt(bestIndex)
     }
 
     return newEvents

@@ -103,7 +103,7 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
             val y = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll
             val height = (event.duration.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx()
 
-            drawRoundRect(currColor, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.dp.toPx()))
+            drawRoundRect(currColor, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.toPx()))
         }
     }
 
@@ -146,7 +146,7 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
 
         val path = Path()
         path.moveTo(xFrom, yFrom)
-        path.cubicTo(xTo, yFrom + PATH_STRENGTH.dp.toPx(), xFrom, yTo - PATH_STRENGTH.dp.toPx(), xTo, yTo)
+        path.cubicTo(xTo, yFrom + PATH_STRENGTH.toPx(), xFrom, yTo - PATH_STRENGTH.toPx(), xTo, yTo)
         drawPath(path, color, style = Stroke(pathEffect = pathEffect))
     }
 
@@ -157,7 +157,7 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
             val dayDiff = diff - diff.inWholeDays.days
             val yFrom = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll + (TASK_HOURS * HOUR_SIZE).dp.toPx()
 
-            val interval = PATH_INTERVALS.dp.toPx()
+            val interval = PATH_INTERVALS.toPx()
             val pathEffect = PathEffect.dashPathEffect(floatArrayOf(interval, interval))
             if (task.event != null) {
                 val eventDiff = task.event!!.time - time

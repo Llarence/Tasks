@@ -37,7 +37,7 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 // Needs dateState because it won't update the modifier without it
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calendarObjectsGenerated: SnapshotStateList<CalendarObject>, weekInstantState: MutableState<Instant>, timeZone: TimeZone, modifier: Modifier = Modifier) {
+fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calendarEventsGenerated: SnapshotStateList<CalendarEvent>, weekInstantState: MutableState<Instant>, timeZone: TimeZone, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
 
     var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
@@ -92,13 +92,13 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                     }
 
                     if (!dragging) {
-                        for (i in (calendarObjectsGenerated.size - 1) downTo 0) {
-                            val calendarObject = calendarObjectsGenerated[i]
+                        for (i in (calendarEventsGenerated.size - 1) downTo 0) {
+                            val calendarObject = calendarEventsGenerated[i]
                             val offset = calendarObject.inBounds(this, weekInstant, startPos, textBuffer, daySize, scroll)
                             if (offset != null) {
                                 dragging = true
 
-                                calendarObjectsGenerated.removeAt(i)
+                                calendarEventsGenerated.removeAt(i)
                                 calendarObjects.add(calendarObject)
 
                                 dragOffset = offset
@@ -164,16 +164,16 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
             drawLine(Color.Gray, Offset(textBuffer, y), Offset(size.width, y))
         }
 
-        for (i in calendarObjectsGenerated.indices) {
-            calendarObjectsGenerated[i].preDraw(this, weekInstant, textBuffer, daySize, scroll)
+        for (i in calendarEventsGenerated.indices) {
+            calendarEventsGenerated[i].preDraw(this, weekInstant, textBuffer, daySize, scroll)
         }
 
         for (i in calendarObjects.indices) {
             calendarObjects[i].preDraw(this, weekInstant, textBuffer, daySize, scroll)
         }
 
-        for (i in calendarObjectsGenerated.indices) {
-            calendarObjectsGenerated[i].draw(this, weekInstant, false, textBuffer, daySize, scroll)
+        for (i in calendarEventsGenerated.indices) {
+            calendarEventsGenerated[i].draw(this, weekInstant, false, textBuffer, daySize, scroll)
         }
 
         for (i in calendarObjects.indices) {

@@ -232,7 +232,7 @@ fun app() {
                 val datetime = Clock.System.now().toLocalDateTime(timeZone)
                 mutableStateOf(datetime.copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone))
             }
-            val calendarObjectsGenerated = remember { mutableStateListOf<CalendarObject>() }
+            val calendarEventsGenerated = remember { mutableStateListOf<CalendarEvent>() }
 
             var calendarTime by calendarTimeState
 
@@ -255,9 +255,13 @@ fun app() {
                     val locationTimes = LocationTimes()
                     locationTimes.set(0, 0, 20.minutes)
 
-                    calendarObjectsGenerated.clear()
+                    for (calendarObject in calendarEventsGenerated) {
+                        calendarObject.event.task?.event = null
+                    }
+                    calendarEventsGenerated.clear()
+
                     for (event in autofillMinTime(Clock.System.now(), eventsAndTasks.first, eventsAndTasks.second, locationTimes)) {
-                        calendarObjectsGenerated.add(CalendarEvent(event, randomColor()))
+                        calendarEventsGenerated.add(CalendarEvent(event, randomColor()))
                     }
                 }) {
                     Text("Auto Fill")
@@ -267,7 +271,7 @@ fun app() {
                 Text("${calendarDatetime.month} ${calendarDatetime.dayOfMonth}, ${calendarDatetime.year}")
             }
 
-            RenderedCalendar(calendarObjects, calendarObjectsGenerated, calendarTimeState, timeZone, Modifier.fillMaxSize())
+            RenderedCalendar(calendarObjects, calendarEventsGenerated, calendarTimeState, timeZone, Modifier.fillMaxSize())
         }
     }
 }
