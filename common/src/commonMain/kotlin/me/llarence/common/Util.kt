@@ -3,8 +3,8 @@ package me.llarence.common
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.nanoseconds
 
 @Composable
 fun <T> RestrictedTextField(value: T, valueToText: (T) -> String, textToValue: (String) -> T?, onValueChange: (T) -> Unit, enabled: Boolean = true, keyboardOptions: KeyboardOptions = KeyboardOptions()) {
@@ -47,3 +47,6 @@ fun calendarObjectsToEventsAndTasks(calendarObjects: List<CalendarObject>): Pair
 
     return Pair(events, tasks)
 }
+
+val Float.hours: Duration
+    get() = (this * NANOS_IN_HOUR).toLong().nanoseconds

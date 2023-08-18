@@ -40,7 +40,7 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calendarEventsGenerated: SnapshotStateList<CalendarEvent>, weekInstantState: MutableState<Instant>, timeZone: TimeZone, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
 
-    var scroll by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
+    var scroll by remember { mutableStateOf(-HOUR_SIZE * START_HOUR) }
 
     var textBuffer by remember { mutableStateOf(0f) }
     var daySize by remember { mutableStateOf(0f) }

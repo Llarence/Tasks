@@ -1,9 +1,7 @@
 package me.llarence.common
 
 import androidx.compose.ui.unit.dp
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.nanoseconds
 
 // TODO: Make some of these dp (maybe?)
 
@@ -27,12 +25,11 @@ const val TASK_HOURS = 0.2f
 
 const val SCROLL_SPEED = 0.5f
 
+const val START_HOUR = 8
+
 // TODO: Rename
 val PATH_STRENGTH = 100.dp
 val PATH_INTERVALS = 10.dp
 
 const val NANOS_IN_HOUR =  60f * 60f * 1000f * 1000f * 1000f
 const val HOURS_IN_NANO = 1 / NANOS_IN_HOUR
-
-val Float.hours: Duration
-    get() = (this * NANOS_IN_HOUR).toLong().nanoseconds

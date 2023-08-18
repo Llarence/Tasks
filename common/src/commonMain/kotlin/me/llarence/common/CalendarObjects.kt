@@ -16,7 +16,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.nanoseconds
 
 // This code is kinda dumb, but it is all hidden in this file
 // TODO: Look into improving createWithNew functions by not making these object immutable to decrease ram usage
@@ -65,22 +64,31 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
     constructor(event: Event, json: JSONObject) : this(event, Color(json.getLong("color").toULong()))
 
     override val inBoundsFun: PointerInputScope.(Instant, Offset, Float, Float, Float) -> Float? = { time, offset, textBuffer, daySize, scroll ->
-        val diff = event.time - time
-        if (diff < 7.days) {
-            val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays)
-            val relaX = x - offset.x
-            if (0 >= relaX && relaX + daySize > 0) {
-                val dayDiff = diff - diff.inWholeDays.days
-                val y = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll
-                val relaY = y - offset.y
-                if (0 >= relaY && relaY + (event.duration.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() > 0) {
-                    relaY
-                } else {
-                    null
+        val startDiff = event.time - time
+        val endDiff = startDiff + event.duration
+        if (startDiff < 7.days && endDiff > 0.days) {
+            var ret: Float? = null
+            for (day in startDiff.inWholeDays..endDiff.inWholeDays) {
+                val x = textBuffer + ((daySize + DAY_PADDING) * day)
+
+                if (offset.x in x..(x + daySize)) {
+                    val startDiffForDay = startDiff - day.days
+                    val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
+
+                    val endDiffForDay = endDiff - day.days
+                    val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
+
+                    if (offset.y in startY..endY) {
+                        val mouseDay = ((-textBuffer + offset.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
+                        val mouseHour = ((offset.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
+
+                        ret = (startDiff - mouseDay.days - mouseHour.hours).inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE
+                        break
+                    }
                 }
-            } else {
-                null
             }
+
+            ret
         } else {
             null
         }
@@ -90,37 +98,47 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
     }
 
     override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit = { time, grabbed, textBuffer, daySize, scroll ->
-        val diff = event.time - time
-        if (diff < 7.days) {
+        val startDiff = event.time - time
+        val endDiff = startDiff + event.duration
+        if (startDiff < 7.days && endDiff >= 0.days) {
             val currColor = if (grabbed) {
-                color * DARKEN_PERCENT
+                this@CalendarEvent.color * DARKEN_PERCENT
             } else {
-                color
+                this@CalendarEvent.color
             }
 
-            val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays)
-            val dayDiff = diff - diff.inWholeDays.days
-            val y = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll
-            val height = (event.duration.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx()
+            for (day in startDiff.inWholeDays..endDiff.inWholeDays) {
+                if (day !in 0 until 7) {
+                    continue
+                }
 
-            drawRoundRect(currColor, Offset(x, y), Size(daySize, height), CornerRadius(CORNER_RADIUS.toPx()))
+                val x = textBuffer + ((daySize + DAY_PADDING) * day)
+
+                val startDiffForDay = startDiff - day.days
+                val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
+
+                val endDiffForDay = endDiff - day.days
+                val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
+
+                drawRoundRect(currColor, Offset(x, startY), Size(daySize, endY - startY), CornerRadius(CORNER_RADIUS.toPx()))
+            }
         }
     }
 
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
-        val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS_IN_WEEK - 1)
-        val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), HOURS_IN_DAY - (event.duration.inWholeNanoseconds * HOURS_IN_NANO))
+        val day = ((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
+        val hour = ((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
 
         event.time = time + day.days + hour.hours
     }
 }
 
-class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inColor) {
+class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color) {
     constructor(task: Task, json: JSONObject) : this(task, Color(json.getLong("color").toULong()))
 
     override val inBoundsFun: PointerInputScope.(Instant, Offset, Float, Float, Float) -> Float? = { time, offset, textBuffer, daySize, scroll ->
         val diff = task.dueTime - time
-        if (diff < 7.days) {
+        if (diff < 7.days && diff >= 0.days) {
             val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays)
             val relaX = x - offset.x
             if (0 >= relaX && relaX + daySize > 0) {
@@ -152,7 +170,7 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
 
     override val preDrawFun: DrawScope.(Instant, Float, Float, Float) -> Unit = { time, textBuffer, daySize, scroll ->
         val diff = task.dueTime - time
-        if (diff < 7.days) {
+        if (diff < 7.days && diff >= 0.days) {
             val xFrom = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays) + daySize / 2f
             val dayDiff = diff - diff.inWholeDays.days
             val yFrom = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll + (TASK_HOURS * HOUR_SIZE).dp.toPx()
@@ -179,11 +197,11 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
 
     override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit = { time, grabbed, textBuffer, daySize, scroll ->
         val diff = task.dueTime - time
-        if (diff < 7.days) {
+        if (diff < 7.days && diff >= 0.days) {
             val currColor = if (grabbed) {
-                color * DARKEN_PERCENT
+                this@CalendarTask.color * DARKEN_PERCENT
             } else {
-                color
+                this@CalendarTask.color
             }
 
             val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays)
@@ -200,8 +218,8 @@ class CalendarTask(val task: Task, inColor: Color) : ColorableCalendarObject(inC
     }
 
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
-        val day = min(max(((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt(), 0), DAYS_IN_WEEK - 1)
-        val hour = min(max(((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP, 0f), HOURS_IN_DAY - TASK_HOURS)
+        val day = ((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
+        val hour = ((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
 
         task.dueTime = time + day.days + hour.hours
     }

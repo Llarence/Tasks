@@ -45,7 +45,7 @@ fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, l
 
     val tasksTodoByLength = tasks.filter { it.event == null }.toMutableList()
     tasksTodoByLength.shuffle()
-    tasksTodoByLength.sortBy { it.duration }
+    tasksTodoByLength.sortBy { it.dueTime }
 
     while (tasksTodoByLength.isNotEmpty()) {
         val allEvents = (eventsByTime + newEvents).sortedBy { it.time }
@@ -64,7 +64,7 @@ fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, l
             }
         }
 
-        val event = Event(bestTimeAndLocation.first, bestTask!!.duration, bestTimeAndLocation.second, bestTask)
+        val event = Event(bestTimeAndLocation.first, null, bestTask!!.duration, bestTimeAndLocation.second, bestTask)
         bestTask.event = event
         newEvents.add(event)
         tasksTodoByLength.removeAt(bestIndex)

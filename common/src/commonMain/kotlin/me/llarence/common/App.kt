@@ -43,7 +43,7 @@ fun app() {
 
         Column {
             Button({
-                calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), DEFAULT_DURATION, 0, null), randomColor()))
+                calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), 1.days, DEFAULT_DURATION, 0, null), randomColor()))
             }) {
                 Text("New Event")
             }
@@ -56,18 +56,28 @@ fun app() {
 
             val last = calendarObjects.lastOrNull()
             val isEvent = last is CalendarEvent
+            val isTask = last is CalendarTask
             val duration = if (isEvent) {
                 last as CalendarEvent
                 last.event.duration
+            } else if (isTask) {
+                last as CalendarTask
+                last.task.duration
             } else {
                 0.nanoseconds
             }
 
             RestrictedTextField(duration, { (it.inWholeNanoseconds * HOURS_IN_NANO).toString() }, { it.toFloatOrNull()?.hours }, {
-                last as CalendarEvent
-                last.event.duration = it
+                if (isEvent) {
+                    last as CalendarEvent
+                    last.event.duration = it
+                } else {
+                    last as CalendarTask
+                    last.task.duration = it
+                }
+
                 calendarObjects.forceUpdate()
-            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            }, enabled = isEvent || isTask, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
 
             var r by remember { mutableStateOf(0f) }
             var g by remember { mutableStateOf(0f) }
@@ -141,7 +151,6 @@ fun app() {
                 }
             })
 
-            val isTask = last is CalendarTask
             val hour = if (isEvent) {
                 last as CalendarEvent
                 last.event.time.getFloatHour(timeZone)
@@ -155,10 +164,10 @@ fun app() {
             RestrictedTextField(hour, Float::toString, String::toFloatOrNull, {
                 if (isEvent) {
                     last as CalendarEvent
-                    last.event.time.withFloatHour(it, timeZone)
-                } else if (isTask) {
+                    last.event.time = last.event.time.withFloatHour(it, timeZone)
+                } else {
                     last as CalendarTask
-                    last.task.dueTime.withFloatHour(it, timeZone)
+                    last.task.dueTime = last.task.dueTime.withFloatHour(it, timeZone)
                 }
                 calendarObjects.forceUpdate()
             }, enabled = isEvent || isTask, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
@@ -177,7 +186,7 @@ fun app() {
                 if (isEvent) {
                     last as CalendarEvent
                     last.event.time = last.event.time.toLocalDateTime(timeZone).copy(dayOfMonth = it).toInstant(timeZone)
-                } else if (isTask) {
+                } else {
                     last as CalendarTask
                     last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(dayOfMonth = it).toInstant(timeZone)
                 }
@@ -198,7 +207,7 @@ fun app() {
                 if (isEvent) {
                     last as CalendarEvent
                     last.event.time = last.event.time.toLocalDateTime(timeZone).copy(monthNumber = it).toInstant(timeZone)
-                } else if (isTask) {
+                } else {
                     last as CalendarTask
                     last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(monthNumber = it).toInstant(timeZone)
                 }
@@ -219,7 +228,7 @@ fun app() {
                 if (isEvent) {
                     last as CalendarEvent
                     last.event.time = last.event.time.toLocalDateTime(timeZone).copy(year = it).toInstant(timeZone)
-                } else if (isTask) {
+                } else {
                     last as CalendarTask
                     last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(year = it).toInstant(timeZone)
                 }

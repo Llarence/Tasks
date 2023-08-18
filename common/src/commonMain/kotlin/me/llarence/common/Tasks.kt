@@ -1,8 +1,5 @@
 package me.llarence.common
 
-import androidx.compose.runtime.Stable
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlinx.datetime.Instant
 import org.json.JSONArray
 import org.json.JSONObject
@@ -46,13 +43,16 @@ class LocationTimes() {
 
 // Json doesn't include task
 // Earlier locations are prioritised
-class Event(var time: Instant, var duration: Duration, var location: Int, var task: Task?) {
-    constructor(jsonWithoutTask: JSONObject) : this(Instant.parse(jsonWithoutTask.getString("time")), jsonWithoutTask.getLong("duration").nanoseconds, jsonWithoutTask.getInt("location"), null)
+class Event(var time: Instant, var repeat: Duration?, var duration: Duration, var location: Int, var task: Task?) {
+    constructor(jsonWithoutTask: JSONObject) : this(Instant.parse(jsonWithoutTask.getString("time")), (jsonWithoutTask.get("repeat") as Long?)?.nanoseconds, jsonWithoutTask.getLong("duration").nanoseconds, jsonWithoutTask.getInt("location"), null)
 
     fun toJson(): JSONObject {
         val json = JSONObject()
 
         json.put("time", time.toString())
+        if (repeat != null) {
+            json.put("repeat", repeat!!.inWholeNanoseconds)
+        }
         json.put("duration", duration.inWholeNanoseconds)
         json.put("location", location)
 
