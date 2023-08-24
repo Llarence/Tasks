@@ -110,18 +110,21 @@ fun app() {
             val checked = taskSelected != null
             if (checked) {
                 if (last is CalendarEvent) {
-                    if (taskSelected!!.event == last.event) {
-                        taskSelected!!.event = null
-                        last.event.task = null
-                    } else {
-                        taskSelected!!.event?.task = null
-                        last.event.task?.event = null
+                    if (last.event.repeat == null) {
+                        if (taskSelected!!.event == last.event) {
+                            taskSelected!!.event = null
+                            last.event.task = null
+                        } else {
+                            taskSelected!!.event?.task = null
+                            last.event.task?.event = null
 
-                        taskSelected!!.event = last.event
-                        last.event.task = taskSelected
+                            taskSelected!!.event = last.event
+                            last.event.task = taskSelected
+                        }
+
+                        calendarObjects.forceUpdate()
                     }
 
-                    calendarObjects.forceUpdate()
                     taskSelected = null
                 } else if (last is CalendarTask && last.task != taskSelected) {
                     if (taskSelected!!.requirements.contains(last.task)) {

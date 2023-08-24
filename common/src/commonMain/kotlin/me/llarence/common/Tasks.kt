@@ -61,6 +61,7 @@ class Event(var time: Instant, var repeat: Duration?, var duration: Duration, va
 }
 
 // Json doesn't include requirements, requiredFor, or event
+// event's repeat value should be null
 class Task(var duration: Duration, val locations: MutableList<Int>, val requirements: MutableList<Task>, val requiredFor: MutableList<Task>, var dueTime: Instant, var event: Event?) {
     constructor(jsonWithoutTask: JSONObject) : this(jsonWithoutTask.getLong("duration").nanoseconds, jsonWithoutTask.getJSONArray("locations").toMutableList() as MutableList<Int>, mutableListOf(), mutableListOf(), Instant.parse(jsonWithoutTask.getString("dueTime")), null)
 

@@ -15,7 +15,9 @@ import org.json.JSONObject
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.nanoseconds
 
 // This code is kinda dumb, but it is all hidden in this file
 // TODO: Look into improving createWithNew functions by not making these object immutable to decrease ram usage
@@ -23,7 +25,7 @@ import kotlin.time.Duration.Companion.days
 // TODO: Move some of the math into functions
 
 // Task and Event are not in the json
-abstract class CalendarObject() {
+abstract class CalendarObject {
     // Kinda dumb but I want the scope mostly for .toPx()
     // It feels like less should be passed into these functions
     abstract val inBoundsFun: PointerInputScope.(Instant, Offset, Float, Float, Float) -> Float?
@@ -63,64 +65,115 @@ abstract class ColorableCalendarObject(var color: Color) : CalendarObject() {
 class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(color) {
     constructor(event: Event, json: JSONObject) : this(event, Color(json.getLong("color").toULong()))
 
-    override val inBoundsFun: PointerInputScope.(Instant, Offset, Float, Float, Float) -> Float? = { time, offset, textBuffer, daySize, scroll ->
-        val startDiff = event.time - time
-        val endDiff = startDiff + event.duration
-        if (startDiff < 7.days && endDiff > 0.days) {
-            var ret: Float? = null
-            for (day in startDiff.inWholeDays..endDiff.inWholeDays) {
-                val x = textBuffer + ((daySize + DAY_PADDING) * day)
+    val inBoundsSingleFun: PointerInputScope.(Duration, Duration, Offset, Float, Float, Float) -> Float? = { startDiff, endDiff, offset, textBuffer, daySize, scroll ->
+        var ret: Float? = null
+        for (day in startDiff.inWholeDays..endDiff.inWholeDays) {
+            val x = textBuffer + ((daySize + DAY_PADDING) * day)
 
-                if (offset.x in x..(x + daySize)) {
-                    val startDiffForDay = startDiff - day.days
-                    val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
-
-                    val endDiffForDay = endDiff - day.days
-                    val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
-
-                    if (offset.y in startY..endY) {
-                        val mouseDay = ((-textBuffer + offset.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
-                        val mouseHour = ((offset.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
-
-                        ret = (startDiff - mouseDay.days - mouseHour.hours).inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE
-                        break
-                    }
-                }
-            }
-
-            ret
-        } else {
-            null
-        }
-    }
-
-    override val preDrawFun: DrawScope.(Instant, Float, Float, Float) -> Unit = { _, _, _, _ ->
-    }
-
-    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit = { time, grabbed, textBuffer, daySize, scroll ->
-        val startDiff = event.time - time
-        val endDiff = startDiff + event.duration
-        if (startDiff < 7.days && endDiff >= 0.days) {
-            val currColor = if (grabbed) {
-                this@CalendarEvent.color * DARKEN_PERCENT
-            } else {
-                this@CalendarEvent.color
-            }
-
-            for (day in startDiff.inWholeDays..endDiff.inWholeDays) {
-                if (day !in 0 until 7) {
-                    continue
-                }
-
-                val x = textBuffer + ((daySize + DAY_PADDING) * day)
-
+            if (offset.x in x..(x + daySize)) {
                 val startDiffForDay = startDiff - day.days
                 val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
 
                 val endDiffForDay = endDiff - day.days
                 val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
 
-                drawRoundRect(currColor, Offset(x, startY), Size(daySize, endY - startY), CornerRadius(CORNER_RADIUS.toPx()))
+                if (offset.y in startY..endY) {
+                    val mouseDay = ((-textBuffer + offset.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
+                    val mouseHour = ((offset.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
+
+                    ret = (startDiff - mouseDay.days - mouseHour.hours).inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE
+                    break
+                }
+            }
+        }
+
+        ret
+    }
+
+    override val inBoundsFun: PointerInputScope.(Instant, Offset, Float, Float, Float) -> Float? = { time, offset, textBuffer, daySize, scroll ->
+        if (event.repeat == null) {
+            val startDiff = event.time - time
+            val endDiff = startDiff + event.duration
+            if (startDiff < 7.days && endDiff >= 0.days) {
+                inBoundsSingleFun(startDiff, endDiff, offset, textBuffer, daySize, scroll)
+            } else {
+                null
+            }
+        } else {
+            val ret: Float?
+
+            val diff = event.time - time
+            val repeats = (diff / event.repeat!!).toInt()
+            var startDiff = diff - (event.repeat!! * repeats) + if (repeats >= 0) { 0.nanoseconds } else { event.repeat!! }
+
+            while (true) {
+                val endDiff = startDiff + event.duration
+                if (startDiff < 7.days && endDiff >= 0.days) {
+                    val currRet = inBoundsSingleFun(startDiff, endDiff, offset, textBuffer, daySize, scroll)
+                    if (currRet != null) {
+                        ret = currRet
+                        break
+                    }
+                } else {
+                    ret = null
+                    break
+                }
+
+                startDiff += event.repeat!!
+            }
+
+            ret
+        }
+    }
+
+    override val preDrawFun: DrawScope.(Instant, Float, Float, Float) -> Unit = { _, _, _, _ ->
+    }
+
+    val drawSingleFun: DrawScope.(Duration, Duration, Boolean, Float, Float, Float) -> Unit = { startDiff, endDiff, grabbed, textBuffer, daySize, scroll ->
+        val currColor = if (grabbed) {
+            this@CalendarEvent.color * DARKEN_PERCENT
+        } else {
+            this@CalendarEvent.color
+        }
+
+        for (day in startDiff.inWholeDays..endDiff.inWholeDays) {
+            if (day !in 0 until 7) {
+                continue
+            }
+
+            val x = textBuffer + ((daySize + DAY_PADDING) * day)
+
+            val startDiffForDay = startDiff - day.days
+            val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
+
+            val endDiffForDay = endDiff - day.days
+            val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
+
+            drawRoundRect(currColor, Offset(x, startY), Size(daySize, endY - startY), CornerRadius(CORNER_RADIUS.toPx()))
+        }
+    }
+
+    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit = { time, grabbed, textBuffer, daySize, scroll ->
+        if (event.repeat == null) {
+            val startDiff = event.time - time
+            val endDiff = startDiff + event.duration
+            if (startDiff < 7.days && endDiff >= 0.days) {
+                drawSingleFun(startDiff, endDiff, grabbed, textBuffer, daySize, scroll)
+            }
+        } else {
+            val diff = event.time - time
+            val repeats = (diff / event.repeat!!).toInt()
+            var startDiff = diff - (event.repeat!! * repeats) + if (repeats >= 0) { 0.nanoseconds } else { event.repeat!! }
+
+            while (true) {
+                val endDiff = startDiff + event.duration
+                if (startDiff < 7.days && endDiff >= 0.days) {
+                    drawSingleFun(startDiff, endDiff, grabbed, textBuffer, daySize, scroll)
+                } else {
+                    break
+                }
+
+                startDiff += event.repeat!!
             }
         }
     }
