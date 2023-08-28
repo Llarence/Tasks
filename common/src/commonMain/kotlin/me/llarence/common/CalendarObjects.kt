@@ -72,16 +72,16 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
 
             if (offset.x in x..(x + daySize)) {
                 val startDiffForDay = startDiff - day.days
-                val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
+                val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_PER_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
 
                 val endDiffForDay = endDiff - day.days
-                val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
+                val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_PER_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
 
                 if (offset.y in startY..endY) {
                     val mouseDay = ((-textBuffer + offset.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
                     val mouseHour = (offset.y - scroll) / HOUR_SIZE
 
-                    ret = (startDiff - mouseDay.days - mouseHour.hours).inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE
+                    ret = (startDiff - mouseDay.days - mouseHour.hours).inWholeNanoseconds * HOURS_PER_NANO * HOUR_SIZE
                     break
                 }
             }
@@ -145,10 +145,10 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
             val x = textBuffer + ((daySize + DAY_PADDING) * day)
 
             val startDiffForDay = startDiff - day.days
-            val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
+            val startY = (max(startDiffForDay.inWholeNanoseconds * HOURS_PER_NANO, 0f) * HOUR_SIZE).dp.toPx() + scroll
 
             val endDiffForDay = endDiff - day.days
-            val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_IN_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
+            val endY = (min(endDiffForDay.inWholeNanoseconds * HOURS_PER_NANO, HOURS_IN_DAY.toFloat()) * HOUR_SIZE).dp.toPx() + scroll
 
             drawRoundRect(currColor, Offset(x, startY), Size(daySize, endY - startY), CornerRadius(CORNER_RADIUS.toPx()))
         }
@@ -197,7 +197,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
             val relaX = x - offset.x
             if (0 >= relaX && relaX + daySize > 0) {
                 val dayDiff = diff - diff.inWholeDays.days
-                val y = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll
+                val y = (dayDiff.inWholeNanoseconds * HOURS_PER_NANO * HOUR_SIZE).dp.toPx() + scroll
                 val relaY = y - offset.y
                 if (0 >= relaY && relaY + (TASK_HOURS * HOUR_SIZE).dp.toPx() > 0) {
                     relaY
@@ -227,7 +227,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
         if (diff < 7.days && diff >= 0.days) {
             val xFrom = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays) + daySize / 2f
             val dayDiff = diff - diff.inWholeDays.days
-            val yFrom = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll + (TASK_HOURS * HOUR_SIZE).dp.toPx()
+            val yFrom = (dayDiff.inWholeNanoseconds * HOURS_PER_NANO * HOUR_SIZE).dp.toPx() + scroll + (TASK_HOURS * HOUR_SIZE).dp.toPx()
 
             val interval = PATH_INTERVALS.toPx()
             val pathEffect = PathEffect.dashPathEffect(floatArrayOf(interval, interval))
@@ -235,7 +235,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
                 val eventDiff = task.event!!.time - time
                 if (eventDiff < 7.days) {
                     val eventDayDiff = eventDiff - eventDiff.inWholeDays.days
-                    pathTo(this, xFrom, yFrom, eventDiff.inWholeDays, eventDayDiff.inWholeNanoseconds * HOURS_IN_NANO, textBuffer, daySize, scroll, pathEffect)
+                    pathTo(this, xFrom, yFrom, eventDiff.inWholeDays, eventDayDiff.inWholeNanoseconds * HOURS_PER_NANO, textBuffer, daySize, scroll, pathEffect)
                 }
             }
 
@@ -243,7 +243,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
                 val taskDiff = task.event!!.time - time
                 if (taskDiff < 7.days) {
                     val taskDayDiff = taskDiff - taskDiff.inWholeDays.days
-                    pathTo(this, xFrom, yFrom, taskDiff.inWholeDays, taskDayDiff.inWholeNanoseconds * HOURS_IN_NANO, textBuffer, daySize, scroll, pathEffect)
+                    pathTo(this, xFrom, yFrom, taskDiff.inWholeDays, taskDayDiff.inWholeNanoseconds * HOURS_PER_NANO, textBuffer, daySize, scroll, pathEffect)
                 }
             }
         }
@@ -260,7 +260,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
 
             val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays)
             val dayDiff = diff - diff.inWholeDays.days
-            val y = (dayDiff.inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE).dp.toPx() + scroll
+            val y = (dayDiff.inWholeNanoseconds * HOURS_PER_NANO * HOUR_SIZE).dp.toPx() + scroll
             val height = (TASK_HOURS * HOUR_SIZE).dp.toPx()
 
             val triangle = Path()

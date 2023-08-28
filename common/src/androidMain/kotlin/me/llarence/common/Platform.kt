@@ -1,3 +1,8 @@
 package me.llarence.common
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 
-import java.net.URL
+@Composable
+actual fun getSavePath(): String {
+    return LocalContext.current.filesDir.path
+}

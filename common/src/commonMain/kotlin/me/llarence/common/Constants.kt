@@ -29,5 +29,5 @@ const val START_HOUR = 8
 val PATH_STRENGTH = 100.dp
 val PATH_INTERVALS = 10.dp
 
-const val NANOS_IN_HOUR =  60f * 60f * 1000f * 1000f * 1000f
-const val HOURS_IN_NANO = 1 / NANOS_IN_HOUR
+const val NANOS_PER_HOUR =  60f * 60f * 1000f * 1000f * 1000f
+const val HOURS_PER_NANO = 1 / NANOS_PER_HOUR

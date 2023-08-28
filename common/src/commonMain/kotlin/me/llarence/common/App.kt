@@ -24,16 +24,16 @@ fun LocalDateTime.copy(year: Int = this.year, monthNumber: Int = this.monthNumbe
 }
 
 fun Instant.getFloatHour(timeZone: TimeZone): Float {
-    return (this - toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone)).inWholeNanoseconds * HOURS_IN_NANO
+    return (this - toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone)).inWholeNanoseconds * HOURS_PER_NANO
 }
 
 fun Instant.withFloatHour(value: Float, timeZone: TimeZone): Instant {
-    return toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone) + (value * NANOS_IN_HOUR).toLong().nanoseconds
+    return toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone) + (value * NANOS_PER_HOUR).toLong().nanoseconds
 }
 
 // TODO: Check stuff to make sure it complies with compose
 // TODO: Add removing (it will mean has grabbed has to be set so false and renamed)
-// TODO: Cache toLocalDatetime
+// TODO: Cache toLocalDatetime (maybe)
 @Composable
 fun app() {
     val timeZone = remember { TimeZone.currentSystemDefault() }
@@ -67,7 +67,7 @@ fun app() {
                 0.nanoseconds
             }
 
-            RestrictedTextField(duration, { (it.inWholeNanoseconds * HOURS_IN_NANO).toString() }, { it.toFloatOrNull()?.hours }, {
+            RestrictedTextField(duration, { (it.inWholeNanoseconds * HOURS_PER_NANO).toString() }, { it.toFloatOrNull()?.hours }, {
                 if (isEvent) {
                     last as CalendarEvent
                     last.event.duration = it
@@ -235,6 +235,36 @@ fun app() {
                     last as CalendarTask
                     last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(year = it).toInstant(timeZone)
                 }
+                calendarObjects.forceUpdate()
+            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+
+            val repeatVal = if (isEvent) {
+                last as CalendarEvent
+                if (last.event.repeat != null) {
+                    last.event.repeat!!.inWholeNanoseconds * HOURS_PER_NANO
+                } else {
+                    0f
+                }
+            } else {
+                0f
+            }
+
+            val repeats = if (isEvent) {
+                last as CalendarEvent
+                last.event.repeat != null
+            } else {
+                false
+            }
+
+            Switch(repeats, {
+                last as CalendarEvent
+                last.event.repeat = 1.days
+                calendarObjects.forceUpdate()
+            }, enabled = isEvent)
+
+            RestrictedTextField(repeatVal, Float::toString, String::toFloatOrNull, {
+                last as CalendarEvent
+                last.event.repeat = (it * NANOS_PER_HOUR).toLong().nanoseconds
                 calendarObjects.forceUpdate()
             }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         }

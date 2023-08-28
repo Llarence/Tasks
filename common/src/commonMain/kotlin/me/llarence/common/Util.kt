@@ -49,4 +49,4 @@ fun calendarObjectsToEventsAndTasks(calendarObjects: List<CalendarObject>): Pair
 }
 
 val Float.hours: Duration
-    get() = (this * NANOS_IN_HOUR).toLong().nanoseconds
+    get() = (this * NANOS_PER_HOUR).toLong().nanoseconds
