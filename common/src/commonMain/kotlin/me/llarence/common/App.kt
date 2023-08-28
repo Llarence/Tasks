@@ -43,7 +43,7 @@ fun app() {
 
         Column {
             Button({
-                calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), 1.days, DEFAULT_DURATION, 0, null), randomColor()))
+                calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), null, DEFAULT_DURATION, 0, null), randomColor()))
             }) {
                 Text("New Event")
             }

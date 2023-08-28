@@ -6,6 +6,8 @@ import org.json.JSONObject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
 
+// Maybe these could be data classes
+
 class LocationTimes() {
     constructor(json: JSONArray) : this() {
         for (entryJson in json) {
@@ -46,7 +48,7 @@ class LocationTimes() {
 class Event(var time: Instant, var repeat: Duration?, var duration: Duration, var location: Int, var task: Task?) {
     constructor(jsonWithoutTask: JSONObject) : this(Instant.parse(jsonWithoutTask.getString("time")), (jsonWithoutTask.get("repeat") as Long?)?.nanoseconds, jsonWithoutTask.getLong("duration").nanoseconds, jsonWithoutTask.getInt("location"), null)
 
-    fun toJson(): JSONObject {
+    fun toJsonWithoutTask(): JSONObject {
         val json = JSONObject()
 
         json.put("time", time.toString())
@@ -58,6 +60,10 @@ class Event(var time: Instant, var repeat: Duration?, var duration: Duration, va
 
         return json
     }
+
+    fun copyWithoutTask(): Event {
+        return Event(time, repeat, duration, location, null)
+    }
 }
 
 // Json doesn't include requirements, requiredFor, or event
@@ -65,7 +71,7 @@ class Event(var time: Instant, var repeat: Duration?, var duration: Duration, va
 class Task(var duration: Duration, val locations: MutableList<Int>, val requirements: MutableList<Task>, val requiredFor: MutableList<Task>, var dueTime: Instant, var event: Event?) {
     constructor(jsonWithoutTask: JSONObject) : this(jsonWithoutTask.getLong("duration").nanoseconds, jsonWithoutTask.getJSONArray("locations").toMutableList() as MutableList<Int>, mutableListOf(), mutableListOf(), Instant.parse(jsonWithoutTask.getString("dueTime")), null)
 
-    fun toJson(): JSONObject {
+    fun toJsonWithoutRequirementsAndEvent(): JSONObject {
         val json = JSONObject()
 
         json.put("duration", duration.inWholeNanoseconds)

@@ -64,7 +64,7 @@ fun toEventsAndTasksJson(events: List<Event>, tasks: List<Task>): JSONObject {
 
     val eventsJson = JSONArray()
     for (event in events) {
-        val eventJson = event.toJson()
+        val eventJson = event.toJsonWithoutTask()
 
         if (event.task != null) {
             eventJson.put("task", tasks.indexOf(event.task))
@@ -75,7 +75,7 @@ fun toEventsAndTasksJson(events: List<Event>, tasks: List<Task>): JSONObject {
 
     val tasksJson = JSONArray()
     for (task in tasks) {
-        val taskJson = task.toJson()
+        val taskJson = task.toJsonWithoutRequirementsAndEvent()
 
         val requirementsJson = JSONArray()
         for (requirement in task.requirements) {

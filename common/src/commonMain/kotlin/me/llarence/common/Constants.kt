@@ -17,8 +17,6 @@ val CORNER_RADIUS = 10.dp
 
 const val DARKEN_PERCENT = 0.8f
 
-const val HOUR_SNAP = 0.2f
-
 val DEFAULT_DURATION = 1.hours
 
 const val TASK_HOURS = 0.2f

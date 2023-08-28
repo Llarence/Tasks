@@ -1,9 +1,50 @@
 package me.llarence.common
 
 import kotlinx.datetime.Instant
+import kotlin.math.floor
 
-// Events must be sorted by time
-fun firstTimeAndLocation(task: Task, startTime: Instant, events: List<Event>, locationTimes: LocationTimes, endTime: Instant = task.dueTime): Pair<Instant, Int>? {
+// This all could be optimized
+
+fun repeatInstanceRightBefore(startTime: Instant, repeatedEvent: Event): Event {
+    val repeats = floor((startTime - repeatedEvent.time) / repeatedEvent.repeat!!)
+
+    return Event(repeatedEvent.time + (repeatedEvent.repeat!! * repeats), null, repeatedEvent.duration, repeatedEvent.location, null)
+}
+
+// Maybe break into functions
+fun generateEvents(startTime: Instant, eventsByTime: List<Event>, repeatedEvents: List<Event>): Sequence<Event> {
+    if (repeatedEvents.isEmpty()) {
+        return eventsByTime.asSequence()
+    }
+
+    val repeatInstanceAndDurations = repeatedEvents.map { Pair(repeatInstanceRightBefore(startTime, it), it.repeat!!) }
+
+    return sequence {
+        for (event in eventsByTime) {
+            while (true) {
+                val earliest = repeatInstanceAndDurations.minBy { it.first.time }
+
+                if (earliest.first.time <= event.time) {
+                    yield(earliest.first.copyWithoutTask())
+                    earliest.first.time += earliest.second
+                } else {
+                    break
+                }
+            }
+
+            yield(event)
+        }
+
+        while (true) {
+            val earliest = repeatInstanceAndDurations.minBy { it.first.time }
+
+            yield(earliest.first.copyWithoutTask())
+            earliest.first.time += earliest.second
+        }
+    }
+}
+
+fun firstTimeAndLocation(task: Task, startTime: Instant, eventsByTime: List<Event>, repeatedEvents: List<Event>, locationTimes: LocationTimes, endTime: Instant = task.dueTime): Pair<Instant, Int>? {
     var bestStartTime = startTime
     var bestEndTime = startTime + task.duration
     if (bestEndTime > endTime) {
@@ -12,19 +53,19 @@ fun firstTimeAndLocation(task: Task, startTime: Instant, events: List<Event>, lo
 
     var bestLocation = task.locations.first()
 
-    for (event in events) {
+    for (event in generateEvents(startTime, eventsByTime, repeatedEvents)) {
         // Hate to call the same function twice, but it looks nicer
         val bestLocationForEvent = task.locations.minBy { locationTimes.get(it, event.location) }
         val bestLocationTimeTo = locationTimes.get(bestLocationForEvent, event.location)
 
         val bestStartForEvent = event.time + event.duration + bestLocationTimeTo
-        if (event.time + event.duration + bestLocationTimeTo < bestStartTime) {
-            break
+        if (bestStartForEvent < bestStartTime) {
+            continue
         }
 
         val bestLocationTimeFrom = task.locations.minOf { locationTimes.get(event.location, it) }
         if (event.time > bestEndTime + bestLocationTimeFrom) {
-            continue
+            break
         }
 
         bestStartTime = bestStartForEvent
@@ -40,7 +81,8 @@ fun firstTimeAndLocation(task: Task, startTime: Instant, events: List<Event>, lo
 }
 
 fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, locationTimes: LocationTimes): List<Event> {
-    val eventsByTime = events.sortedBy { it.time }
+    val eventsByTime = events.filter { it.repeat == null }.sortedBy { it.time }
+    val repeatedEvents = events.filter { it.repeat != null }
     val newEvents = mutableListOf<Event>()
 
     val tasksTodoByLength = tasks.filter { it.event == null }.toMutableList()
@@ -48,7 +90,7 @@ fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, l
     tasksTodoByLength.sortBy { it.dueTime }
 
     while (tasksTodoByLength.isNotEmpty()) {
-        val allEvents = (eventsByTime + newEvents).sortedBy { it.time }
+        val allEventsByTime = (eventsByTime + newEvents).sortedBy { it.time }
 
         var bestTimeAndLocation = Pair(Instant.DISTANT_FUTURE, 0)
         var bestTask: Task? = null
@@ -56,7 +98,7 @@ fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, l
         for (i in tasksTodoByLength.indices) {
             val task = tasksTodoByLength[i]
             // Having bestTimeAndLocation.first as the endTime doesn't cutoff it being the same
-            val timeAndLocation = firstTimeAndLocation(task, currTime, allEvents, locationTimes, bestTimeAndLocation.first)
+            val timeAndLocation = firstTimeAndLocation(task, currTime, allEventsByTime, repeatedEvents, locationTimes, bestTimeAndLocation.first)
             if (timeAndLocation != null && timeAndLocation.first < bestTimeAndLocation.first) {
                 bestTimeAndLocation = timeAndLocation
                 bestTask = task

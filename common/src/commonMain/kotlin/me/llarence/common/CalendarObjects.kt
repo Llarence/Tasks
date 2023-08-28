@@ -79,7 +79,7 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
 
                 if (offset.y in startY..endY) {
                     val mouseDay = ((-textBuffer + offset.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
-                    val mouseHour = ((offset.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
+                    val mouseHour = (offset.y - scroll) / HOUR_SIZE
 
                     ret = (startDiff - mouseDay.days - mouseHour.hours).inWholeNanoseconds * HOURS_IN_NANO * HOUR_SIZE
                     break
@@ -104,6 +104,7 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
 
             val diff = event.time - time
             val repeats = (diff / event.repeat!!).toInt()
+            // TODO: Check this if (repeats >= 0) { 0.nanoseconds } else { event.repeat!! }
             var startDiff = diff - (event.repeat!! * repeats) + if (repeats >= 0) { 0.nanoseconds } else { event.repeat!! }
 
             while (true) {
@@ -180,7 +181,7 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
 
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
         val day = ((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
-        val hour = ((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
+        val hour = (grabbedOffset + change.y - scroll) / HOUR_SIZE
 
         event.time = time + day.days + hour.hours
     }
@@ -272,7 +273,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
 
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
         val day = ((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
-        val hour = ((grabbedOffset + change.y - scroll) / HOUR_SIZE / HOUR_SNAP).roundToInt() * HOUR_SNAP
+        val hour = (grabbedOffset + change.y - scroll) / HOUR_SIZE
 
         task.dueTime = time + day.days + hour.hours
     }
