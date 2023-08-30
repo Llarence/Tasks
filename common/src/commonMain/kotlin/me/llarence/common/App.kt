@@ -1,47 +1,27 @@
 package me.llarence.common
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.*
 import kotlinx.datetime.TimeZone
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.nanoseconds
 
-fun randomColor(): Color {
-    return Color(Random.nextBits(8), Random.nextBits(8), Random.nextBits(8))
-}
-
-fun LocalDateTime.copy(year: Int = this.year, monthNumber: Int = this.monthNumber, dayOfMonth: Int = this.dayOfMonth, hour: Int = this.hour, minute: Int = this.minute, second: Int = this.second, nanosecond: Int = this.nanosecond): LocalDateTime {
-    return LocalDateTime(year, monthNumber, dayOfMonth, hour, minute, second, nanosecond)
-}
-
-fun Instant.getFloatHour(timeZone: TimeZone): Float {
-    return (this - toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone)).inWholeNanoseconds * HOURS_PER_NANO
-}
-
-fun Instant.withFloatHour(value: Float, timeZone: TimeZone): Instant {
-    return toLocalDateTime(timeZone).copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone) + (value * NANOS_PER_HOUR).toLong().nanoseconds
-}
-
-// TODO: Check stuff to make sure it complies with compose
-// TODO: Add removing (it will mean has grabbed has to be set so false and renamed)
-// TODO: Cache toLocalDatetime (maybe)
+// TODO: Check to make sure that everything works with random recomposes?
+// TODO: Add removing
 @Composable
 fun app() {
+    var eventUpdateFun by remember { mutableStateOf<(CalendarObject) -> Unit>({  }) }
+    var taskUpdateFun by remember { mutableStateOf<(CalendarObject) -> Unit>({  }) }
     val timeZone = remember { TimeZone.currentSystemDefault() }
 
     Row {
         val calendarObjects = remember { mutableStateListOf<CalendarObject>() }
 
-        Column {
+        Column(Modifier.width(200.dp)) {
             Button({
                 calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), null, DEFAULT_DURATION, 0, null), randomColor()))
             }) {
@@ -55,218 +35,133 @@ fun app() {
             }
 
             val last = calendarObjects.lastOrNull()
-            val isEvent = last is CalendarEvent
-            val isTask = last is CalendarTask
-            val duration = if (isEvent) {
-                last as CalendarEvent
-                last.event.duration
-            } else if (isTask) {
-                last as CalendarTask
-                last.task.duration
-            } else {
-                0.nanoseconds
+
+            if (last is ColorableCalendarObject) {
+                ColorPicker(last.color) {
+                    last.color = it
+                    calendarObjects.forceUpdate()
+                }
             }
 
-            RestrictedTextField(duration, { (it.inWholeNanoseconds * HOURS_PER_NANO).toString() }, { it.toFloatOrNull()?.hours }, {
-                if (isEvent) {
-                    last as CalendarEvent
-                    last.event.duration = it
-                } else {
-                    last as CalendarTask
-                    last.task.duration = it
+            if (last is CalendarEvent) {
+                val timeFun = DatetimePicker(last.event.time.toLocalDateTime(timeZone)) {
+                    last.event.time = it.toInstant(timeZone)
+                    calendarObjects.forceUpdate()
                 }
 
-                calendarObjects.forceUpdate()
-            }, enabled = isEvent || isTask, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                val durationFun = DurationPicker(last.event.duration) {
+                    last.event.duration = it
+                    calendarObjects.forceUpdate()
+                }
 
-            var r by remember { mutableStateOf(0f) }
-            var g by remember { mutableStateOf(0f) }
-            var b by remember { mutableStateOf(0f) }
-            if (last is ColorableCalendarObject) {
-                r = last.color.red
-                g = last.color.green
-                b = last.color.blue
-            }
+                val repeatVal = if (last.event.repeat != null) {
+                    last.event.repeat!!
+                } else {
+                    DEFAULT_REPEAT
+                }
 
-            Slider(r, {
-                r = it
-                (last as ColorableCalendarObject).color = Color(r, g, b)
-                calendarObjects.forceUpdate()
-            }, Modifier.size(100.dp), last is ColorableCalendarObject, colors = SliderDefaults.colors(thumbColor = Color(r, 0f, 0f)))
+                val repeatFun = DurationPicker(repeatVal) {
+                    last.event.repeat = it
+                    calendarObjects.forceUpdate()
+                }
 
-            Slider(g, {
-                g = it
-                (last as ColorableCalendarObject).color = Color(r, g, b)
-                calendarObjects.forceUpdate()
-            }, Modifier.size(100.dp), last is ColorableCalendarObject, colors = SliderDefaults.colors(thumbColor = Color(0f, g, 0f)))
+                Switch(last.event.repeat != null, {
+                    last.event.repeat = if (it) {
+                        repeatFun(DEFAULT_REPEAT)
+                        DEFAULT_REPEAT
+                    } else {
+                        null
+                    }
+                    calendarObjects.forceUpdate()
+                })
 
-            Slider(b, {
-                b = it
-                (last as ColorableCalendarObject).color = Color(r, g, b)
-                calendarObjects.forceUpdate()
-            }, Modifier.size(100.dp), last is ColorableCalendarObject, colors = SliderDefaults.colors(thumbColor = Color(0f, 0f, b)))
+                var addingTask by remember { mutableStateOf(false) }
+                Switch(addingTask, {
+                    addingTask = it
+                })
 
-            var taskSelected by remember { mutableStateOf<Task?>(null) }
-            val checked = taskSelected != null
-            if (checked) {
-                if (last is CalendarEvent) {
-                    if (last.event.repeat == null) {
-                        if (taskSelected!!.event == last.event) {
-                            taskSelected!!.event = null
-                            last.event.task = null
-                        } else {
-                            taskSelected!!.event?.task = null
-                            last.event.task?.event = null
-
-                            taskSelected!!.event = last.event
-                            last.event.task = taskSelected
+                eventUpdateFun = {
+                    if (it is CalendarEvent) {
+                        if (it != last) {
+                            addingTask = false
                         }
 
-                        calendarObjects.forceUpdate()
-                    }
+                        timeFun(it.event.time.toLocalDateTime(timeZone))
+                        durationFun(it.event.duration)
 
-                    taskSelected = null
-                } else if (last is CalendarTask && last.task != taskSelected) {
-                    if (taskSelected!!.requirements.contains(last.task)) {
-                        taskSelected!!.requirements.remove(last.task)
-                        last.task.requiredFor.remove(taskSelected!!)
+                        if (it.event.repeat != null) {
+                            repeatFun(it.event.repeat!!)
+                        }
                     } else {
-                        taskSelected!!.requiredFor.remove(last.task)
-                        last.task.requirements.remove(taskSelected!!)
+                        if (addingTask) {
+                            if (it is CalendarTask) {
+                                if (last.event.task == it.task) {
+                                    last.event.task = null
+                                    it.task.event = null
+                                } else {
+                                    last.event.task = it.task
+                                    it.task.event = last.event
+                                }
+                            }
+                        }
 
-                        taskSelected!!.requirements.add(last.task)
-                        last.task.requiredFor.add(taskSelected!!)
+                        addingTask = false
                     }
+                }
+            }
 
+            if (last is CalendarTask) {
+                val timeFun = DatetimePicker(last.task.dueTime.toLocalDateTime(timeZone)) {
+                    last.task.dueTime = it.toInstant(timeZone)
                     calendarObjects.forceUpdate()
-                    taskSelected = null
                 }
-            }
 
-            // TODO: Stop crashing on invalid values
-            Switch(checked, {
-                if (it) {
-                    if (last is CalendarTask) {
-                        taskSelected = last.task
+                val durationFun = DurationPicker(last.task.duration) {
+                    last.task.duration = it
+                    calendarObjects.forceUpdate()
+                }
+
+                var adding by remember { mutableStateOf(false) }
+                Switch(adding, {
+                    adding = it
+                })
+
+                taskUpdateFun = {
+                    if (it is CalendarTask) {
+                        if (it != last) {
+                            if (last.task.requirements.contains(it.task)) {
+                                last.task.requirements.remove(it.task)
+                                it.task.requiredFor.remove(last.task)
+                            } else if (last.task.requiredFor.contains(it.task)) {
+                                last.task.requiredFor.remove(it.task)
+                                it.task.requirements.remove(last.task)
+                            } else {
+                                last.task.requiredFor.add(it.task)
+                                it.task.requirements.add(last.task)
+                            }
+
+                            adding = false
+                        }
+
+                        timeFun(it.task.dueTime.toLocalDateTime(timeZone))
+                        durationFun(it.task.duration)
+                    } else {
+                        if (adding) {
+                            if (it is CalendarEvent) {
+                                if (last.task.event == it.event) {
+                                    last.task.event = null
+                                    it.event.task = null
+                                } else {
+                                    last.task.event = it.event
+                                    it.event.task = last.task
+                                }
+                            }
+                        }
+
+                        adding = false
                     }
-                } else {
-                    taskSelected = null
                 }
-            })
-
-            val hour = if (isEvent) {
-                last as CalendarEvent
-                last.event.time.getFloatHour(timeZone)
-            } else if (isTask) {
-                last as CalendarTask
-                last.task.dueTime.getFloatHour(timeZone)
-            } else {
-                0f
             }
-
-            RestrictedTextField(hour, Float::toString, String::toFloatOrNull, {
-                if (isEvent) {
-                    last as CalendarEvent
-                    last.event.time = last.event.time.withFloatHour(it, timeZone)
-                } else {
-                    last as CalendarTask
-                    last.task.dueTime = last.task.dueTime.withFloatHour(it, timeZone)
-                }
-                calendarObjects.forceUpdate()
-            }, enabled = isEvent || isTask, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-
-            val day = if (isEvent) {
-                last as CalendarEvent
-                last.event.time.toLocalDateTime(timeZone).dayOfMonth
-            } else if (isTask) {
-                last as CalendarTask
-                last.task.dueTime.toLocalDateTime(timeZone).dayOfMonth
-            } else {
-                0
-            }
-
-            RestrictedTextField(day, Int::toString, String::toIntOrNull, {
-                if (isEvent) {
-                    last as CalendarEvent
-                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(dayOfMonth = it).toInstant(timeZone)
-                } else {
-                    last as CalendarTask
-                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(dayOfMonth = it).toInstant(timeZone)
-                }
-                calendarObjects.forceUpdate()
-            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-
-            val month = if (isEvent) {
-                last as CalendarEvent
-                last.event.time.toLocalDateTime(timeZone).monthNumber
-            } else if (isTask) {
-                last as CalendarTask
-                last.task.dueTime.toLocalDateTime(timeZone).monthNumber
-            } else {
-                0
-            }
-
-            RestrictedTextField(month, Int::toString, String::toIntOrNull, {
-                if (isEvent) {
-                    last as CalendarEvent
-                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(monthNumber = it).toInstant(timeZone)
-                } else {
-                    last as CalendarTask
-                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(monthNumber = it).toInstant(timeZone)
-                }
-                calendarObjects.forceUpdate()
-            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-
-            val year = if (isEvent) {
-                last as CalendarEvent
-                last.event.time.toLocalDateTime(timeZone).year
-            } else if (isTask) {
-                last as CalendarTask
-                last.task.dueTime.toLocalDateTime(timeZone).year
-            } else {
-                0
-            }
-
-            RestrictedTextField(year, Int::toString, String::toIntOrNull, {
-                if (isEvent) {
-                    last as CalendarEvent
-                    last.event.time = last.event.time.toLocalDateTime(timeZone).copy(year = it).toInstant(timeZone)
-                } else {
-                    last as CalendarTask
-                    last.task.dueTime = last.task.dueTime.toLocalDateTime(timeZone).copy(year = it).toInstant(timeZone)
-                }
-                calendarObjects.forceUpdate()
-            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-
-            val repeatVal = if (isEvent) {
-                last as CalendarEvent
-                if (last.event.repeat != null) {
-                    last.event.repeat!!.inWholeNanoseconds * HOURS_PER_NANO
-                } else {
-                    0f
-                }
-            } else {
-                0f
-            }
-
-            val repeats = if (isEvent) {
-                last as CalendarEvent
-                last.event.repeat != null
-            } else {
-                false
-            }
-
-            Switch(repeats, {
-                last as CalendarEvent
-                last.event.repeat = 1.days
-                calendarObjects.forceUpdate()
-            }, enabled = isEvent)
-
-            RestrictedTextField(repeatVal, Float::toString, String::toFloatOrNull, {
-                last as CalendarEvent
-                last.event.repeat = (it * NANOS_PER_HOUR).toLong().nanoseconds
-                calendarObjects.forceUpdate()
-            }, enabled = isEvent, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         }
 
         Column {
@@ -294,15 +189,15 @@ fun app() {
 
                 Button({
                     val eventsAndTasks = calendarObjectsToEventsAndTasks(calendarObjects)
-                    val locationTimes = LocationTimes()
-                    locationTimes.set(0, 0, 20.minutes)
+                    val locationData = LocationData()
+                    locationData.setTime(0, 0, 20.minutes)
 
                     for (calendarObject in calendarEventsGenerated) {
                         calendarObject.event.task?.event = null
                     }
                     calendarEventsGenerated.clear()
 
-                    for (event in autofillMinTime(Clock.System.now(), eventsAndTasks.first, eventsAndTasks.second, locationTimes)) {
+                    for (event in autofillMinTime(Clock.System.now(), eventsAndTasks.first, eventsAndTasks.second, locationData)) {
                         calendarEventsGenerated.add(CalendarEvent(event, randomColor()))
                     }
                 }) {
@@ -313,7 +208,10 @@ fun app() {
                 Text("${calendarDatetime.month} ${calendarDatetime.dayOfMonth}, ${calendarDatetime.year}")
             }
 
-            RenderedCalendar(calendarObjects, calendarEventsGenerated, calendarTimeState, timeZone, Modifier.fillMaxSize())
+            RenderedCalendar(calendarObjects, calendarEventsGenerated, calendarTimeState, timeZone, {
+                eventUpdateFun(it)
+                taskUpdateFun(it)
+            }, Modifier.fillMaxSize())
         }
     }
 }

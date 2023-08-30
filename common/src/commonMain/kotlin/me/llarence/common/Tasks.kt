@@ -8,36 +8,57 @@ import kotlin.time.Duration.Companion.nanoseconds
 
 // Maybe these could be data classes
 
-class LocationTimes() {
+class LocationData() {
     constructor(json: JSONArray) : this() {
-        for (entryJson in json) {
+        for (entryJson in json.get(0) as JSONArray) {
             entryJson as JSONObject
-            set(entryJson.getInt("From"), entryJson.getInt("To"), entryJson.getLong("Time").nanoseconds)
+            names[entryJson.getInt("Location")] = entryJson.getString("Name")
+        }
+
+        for (entryJson in json.get(1) as JSONArray) {
+            entryJson as JSONObject
+            setTime(entryJson.getInt("From"), entryJson.getInt("To"), entryJson.getLong("Time").nanoseconds)
         }
     }
 
-    val map = mutableMapOf<Pair<Int, Int>, Duration>()
-
-    fun set(from: Int, to: Int, value: Duration) {
-        map[Pair(from, to)] = value
+    val names = mutableMapOf<Int, String>()
+    val durations = mutableMapOf<Pair<Int, Int>, Duration>()
+    
+    fun setTime(from: Int, to: Int, value: Duration) {
+        durations[Pair(from, to)] = value
     }
 
-    fun get(from: Int, to: Int): Duration {
-        return map[Pair(from, to)]!!
+    fun getTime(from: Int, to: Int): Duration {
+        return durations[Pair(from, to)]!!
     }
 
     fun toJson(): JSONArray {
         val json = JSONArray()
 
-        for (entry in map.entries) {
+        val namesJson = JSONArray()
+        for (entry in names.entries) {
+            val entryJson = JSONObject()
+
+            entryJson.put("Location", entry.key)
+            entryJson.put("Name", entry.value)
+
+            namesJson.put(entryJson)
+        }
+
+        json.put(namesJson)
+
+        val durationsJson = JSONArray()
+        for (entry in durations.entries) {
             val entryJson = JSONObject()
 
             entryJson.put("From", entry.key.first)
             entryJson.put("To", entry.key.second)
             entryJson.put("Time", entry.value.inWholeNanoseconds)
 
-            json.put(entryJson)
+            durationsJson.put(entryJson)
         }
+
+        json.put(durationsJson)
 
         return json
     }

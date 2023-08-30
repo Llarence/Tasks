@@ -20,7 +20,8 @@ fun createSaveDirectory(): String {
     return directory.path
 }
 
-val savePath = createSaveDirectory()
+val path = createSaveDirectory()
+
 actual fun getSavePath(): String {
-    return savePath
+    return path
 }

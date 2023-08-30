@@ -1,6 +1,7 @@
 package me.llarence.common
 
 import androidx.compose.ui.unit.dp
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 
 // TODO: Make some of these dp (maybe?)
@@ -31,3 +32,7 @@ val PATH_INTERVALS = 10.dp
 
 const val NANOS_PER_HOUR =  60f * 60f * 1000f * 1000f * 1000f
 const val HOURS_PER_NANO = 1 / NANOS_PER_HOUR
+
+const val MINUTES_PER_HOUR = 60
+
+val DEFAULT_REPEAT = 1.days

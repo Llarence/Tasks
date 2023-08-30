@@ -37,7 +37,7 @@ fun SnapshotStateList<CalendarObject>.forceUpdate() {
 // Needs dateState because it won't update the modifier without it
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calendarEventsGenerated: SnapshotStateList<CalendarEvent>, weekInstantState: MutableState<Instant>, timeZone: TimeZone, modifier: Modifier = Modifier) {
+fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calendarEventsGenerated: SnapshotStateList<CalendarEvent>, weekInstantState: MutableState<Instant>, timeZone: TimeZone, onInteract: (CalendarObject) -> Unit, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
 
     var scroll by remember { mutableStateOf(-HOUR_SIZE * START_HOUR) }
@@ -92,6 +92,8 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                             calendarObject.drag(this, weekInstant, startPos, dragOffset, textBuffer, daySize, scroll)
                             calendarObjects.forceUpdate()
 
+                            onInteract(calendarObject)
+
                             break
                         }
                     }
@@ -111,6 +113,8 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                                 calendarObject.drag(this, weekInstant, startPos, dragOffset, textBuffer, daySize, scroll)
                                 calendarObjects.forceUpdate()
 
+                                onInteract(calendarObject)
+
                                 break
                             }
                         }
@@ -127,8 +131,11 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                     if (!dragging) {
                         scroll += dragAmount.y
                     } else {
-                        calendarObjects.last().drag(this, weekInstant, change.position, dragOffset, textBuffer, daySize, scroll)
+                        val calendarObject = calendarObjects.last()
+                        calendarObject.drag(this, weekInstant, change.position, dragOffset, textBuffer, daySize, scroll)
                         calendarObjects.forceUpdate()
+
+                        onInteract(calendarObject)
                     }
                 }
             )
