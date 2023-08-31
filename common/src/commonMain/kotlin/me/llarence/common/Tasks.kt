@@ -29,7 +29,7 @@ class LocationData() {
     }
 
     fun getTime(from: Int, to: Int): Duration {
-        return durations[Pair(from, to)]!!
+        return durations.getOrDefault(Pair(from, to), 0.nanoseconds)
     }
 
     fun toJson(): JSONArray {

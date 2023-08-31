@@ -25,7 +25,7 @@ operator fun Color.times(value: Float): Color {
     return Color(red * value, green * value, blue * value)
 }
 
-fun SnapshotStateList<CalendarObject>.forceUpdate() {
+fun SnapshotStateList<CalendarObject>.forceUpdateList() {
     this.add(0, CalendarDummy())
     this.removeAt(0)
 }
@@ -90,7 +90,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                             dragOffset = offset
 
                             calendarObject.drag(this, weekInstant, startPos, dragOffset, textBuffer, daySize, scroll)
-                            calendarObjects.forceUpdate()
+                            calendarObjects.forceUpdateList()
 
                             onInteract(calendarObject)
 
@@ -111,7 +111,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                                 dragOffset = offset
 
                                 calendarObject.drag(this, weekInstant, startPos, dragOffset, textBuffer, daySize, scroll)
-                                calendarObjects.forceUpdate()
+                                calendarObjects.forceUpdateList()
 
                                 onInteract(calendarObject)
 
@@ -133,7 +133,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                     } else {
                         val calendarObject = calendarObjects.last()
                         calendarObject.drag(this, weekInstant, change.position, dragOffset, textBuffer, daySize, scroll)
-                        calendarObjects.forceUpdate()
+                        calendarObjects.forceUpdateList()
 
                         onInteract(calendarObject)
                     }

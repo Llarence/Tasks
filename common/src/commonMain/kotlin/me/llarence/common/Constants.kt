@@ -36,3 +36,6 @@ const val HOURS_PER_NANO = 1 / NANOS_PER_HOUR
 const val MINUTES_PER_HOUR = 60
 
 val DEFAULT_REPEAT = 1.days
+
+const val MAIN_STATE = 0
+const val LOCATION_STATE = 1
