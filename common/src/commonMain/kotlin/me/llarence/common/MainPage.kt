@@ -6,37 +6,33 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.*
+import java.io.IOException
 import kotlin.time.Duration.Companion.days
 
 // TODO: Check to make sure that everything works with random recomposes?
 @Composable
-fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
+fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateList<CalendarObject>, calendarEventsGenerated: SnapshotStateList<CalendarEvent>, locationData: LocationData, calendarTimeState: MutableState<Instant>, timeZone: TimeZone) {
     var state by stateDelegate
 
     var eventUpdateFun by remember { mutableStateOf<(CalendarObject) -> Unit>({  }) }
     var taskUpdateFun by remember { mutableStateOf<(CalendarObject) -> Unit>({  }) }
-    val timeZone = remember { TimeZone.currentSystemDefault() }
 
     Row {
-        val calendarObjects = remember { mutableStateListOf<CalendarObject>() }
-
         Column(Modifier.width(200.dp)) {
             Button({
                 if (locationData.names.isNotEmpty()) {
-                    calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), null, DEFAULT_DURATION, locationData.names.keys.random(), null), randomColor()))
+                    calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), null, DEFAULT_DURATION, locationData.names.keys.random(), null), false, "", "", randomColor()))
                 }
             }) {
                 Text("New Event")
             }
 
             Button({
-                calendarObjects.add(0, CalendarTask(Task(DEFAULT_DURATION, mutableListOf(), mutableListOf(), mutableListOf(), Clock.System.now(), null), randomColor()))
+                calendarObjects.add(0, CalendarTask(Task(DEFAULT_DURATION, mutableListOf(locationData.names.keys.random()), mutableListOf(), mutableListOf(), Clock.System.now(), null), "", "", randomColor()))
             }) {
                 Text("New Task")
             }
@@ -49,7 +45,17 @@ fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
 
             val last = calendarObjects.lastOrNull()
 
-            if (last is ColorableCalendarObject) {
+            if (last is MetaDataCalendarObject) {
+                TextField(last.title, {
+                    last.title = it
+                    calendarObjects.forceUpdateList()
+                })
+
+                TextField(last.description, {
+                    last.description = it
+                    calendarObjects.forceUpdateList()
+                })
+
                 ColorPicker(last.color) {
                     last.color = it
                     calendarObjects.forceUpdateList()
@@ -163,6 +169,7 @@ fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
                 var expanded by remember { mutableStateOf(false) }
 
                 Column {
+                    val enabled = last.task.locations.size > 1
                     for (i in last.task.locations.indices) {
                         val location = last.task.locations[i]
                         Row {
@@ -170,7 +177,7 @@ fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
                             Button({
                                 last.task.locations.removeAt(i)
                                 calendarObjects.forceUpdateList()
-                            }) {
+                            }, enabled = enabled) {
                                 Text("Remove")
                             }
                         }
@@ -198,7 +205,7 @@ fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
 
                 taskUpdateFun = {
                     if (it is CalendarTask) {
-                        if (it != last) {
+                        if (it != last && adding) {
                             if (last.task.requirements.contains(it.task)) {
                                 last.task.requirements.remove(it.task)
                                 it.task.requiredFor.remove(last.task)
@@ -259,12 +266,6 @@ fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
         }
 
         Column {
-            val calendarTimeState = remember {
-                val datetime = Clock.System.now().toLocalDateTime(timeZone)
-                mutableStateOf(datetime.copy(hour = 0, minute = 0, second = 0, nanosecond = 0).toInstant(timeZone))
-            }
-            val calendarEventsGenerated = remember { mutableStateListOf<CalendarEvent>() }
-
             var calendarTime by calendarTimeState
 
             // TODO: See if there is way to modify the date without copying
@@ -281,6 +282,39 @@ fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
                     Text("Next Week")
                 }
 
+                var filename by remember { mutableStateOf("") }
+                TextField(filename, {
+                    filename = it
+                })
+
+                Button({
+                    val file = try {
+                        getFile("$filename.json")
+                    } catch (_: IOException) {
+                        null
+                    }
+
+                    if (file != null) {
+                        save(file)
+                    }
+                }) {
+                    Text("Save")
+                }
+
+                Button({
+                    val file = try {
+                        getFile("$filename.json")
+                    } catch (_: IOException) {
+                        null
+                    }
+
+                    if (file != null) {
+                        load(file)
+                    }
+                }) {
+                    Text("Load")
+                }
+
                 Button({
                     val eventsAndTasks = calendarObjectsToEventsAndTasks(calendarObjects)
 
@@ -290,7 +324,7 @@ fun MainPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
                     calendarEventsGenerated.clear()
 
                     for (event in autofillMinTime(Clock.System.now(), eventsAndTasks.first, eventsAndTasks.second, locationData)) {
-                        calendarEventsGenerated.add(CalendarEvent(event, randomColor()))
+                        calendarEventsGenerated.add(CalendarEvent(event, true, "", "", randomColor()))
                     }
                 }) {
                     Text("Auto Fill")

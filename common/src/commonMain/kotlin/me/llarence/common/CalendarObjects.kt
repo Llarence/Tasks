@@ -9,6 +9,9 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.text.*
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.Instant
 import org.json.JSONObject
@@ -29,8 +32,12 @@ abstract class CalendarObject {
     // Kinda dumb but I want the scope mostly for .toPx()
     // It feels like less should be passed into these functions
     abstract val inBoundsFun: PointerInputScope.(Instant, Offset, Float, Float, Float) -> Float?
-    abstract val preDrawFun: DrawScope.(Instant, Float, Float, Float) -> Unit
-    abstract val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit
+    @OptIn(ExperimentalTextApi::class)
+    abstract val preDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit
+    @OptIn(ExperimentalTextApi::class)
+    abstract val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float, TextMeasurer) -> Unit
+    @OptIn(ExperimentalTextApi::class)
+    abstract val postDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit
     abstract val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit
 
     abstract fun toJson(): JSONObject
@@ -39,12 +46,19 @@ abstract class CalendarObject {
         return inBoundsFun(pointerInputScope, time, offset, textBuffer, daySize, scroll)
     }
 
-    fun preDraw(drawScope: DrawScope, time: Instant, textBuffer: Float, daySize: Float, scroll: Float) {
-        preDrawFun(drawScope, time, textBuffer, daySize, scroll)
+    @OptIn(ExperimentalTextApi::class)
+    fun preDraw(drawScope: DrawScope, time: Instant, textBuffer: Float, daySize: Float, scroll: Float, textMeasurer: TextMeasurer) {
+        preDrawFun(drawScope, time, textBuffer, daySize, scroll, textMeasurer)
     }
 
-    fun draw(drawScope: DrawScope, time: Instant, grabbed: Boolean, textBuffer: Float, daySize: Float, scroll: Float) {
-        drawFun(drawScope, time, grabbed, textBuffer, daySize, scroll)
+    @OptIn(ExperimentalTextApi::class)
+    fun draw(drawScope: DrawScope, time: Instant, grabbed: Boolean, textBuffer: Float, daySize: Float, scroll: Float, textMeasurer: TextMeasurer) {
+        drawFun(drawScope, time, grabbed, textBuffer, daySize, scroll, textMeasurer)
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    fun postDraw(drawScope: DrawScope, time: Instant, textBuffer: Float, daySize: Float, scroll: Float, textMeasurer: TextMeasurer) {
+        postDrawFun(drawScope, time, textBuffer, daySize, scroll, textMeasurer)
     }
 
     fun drag(pointerInputScope: PointerInputScope, time: Instant, change: Offset, grabbedOffset: Float, textBuffer: Float, daySize: Float, scroll: Float) {
@@ -52,18 +66,20 @@ abstract class CalendarObject {
     }
 }
 
-abstract class ColorableCalendarObject(var color: Color) : CalendarObject() {
+abstract class MetaDataCalendarObject(var title: String, var description: String, var color: Color) : CalendarObject() {
     override fun toJson(): JSONObject {
         val json = JSONObject()
 
+        json.put("title", title)
+        json.put("description", description)
         json.put("color", color.value.toLong())
 
         return json
     }
 }
 
-class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(color) {
-    constructor(event: Event, json: JSONObject) : this(event, Color(json.getLong("color").toULong()))
+class CalendarEvent(val event: Event, var generated: Boolean, title: String, description: String, color: Color) : MetaDataCalendarObject(title, description, color) {
+    constructor(event: Event, json: JSONObject) : this(event, json.getBoolean("generated"), json.getString("title"), json.getString("description"), Color(json.getLong("color").toULong()))
 
     val inBoundsSingleFun: PointerInputScope.(Duration, Duration, Offset, Float, Float, Float) -> Float? = { startDiff, endDiff, offset, textBuffer, daySize, scroll ->
         var ret: Float? = null
@@ -127,7 +143,8 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
         }
     }
 
-    override val preDrawFun: DrawScope.(Instant, Float, Float, Float) -> Unit = { _, _, _, _ ->
+    @OptIn(ExperimentalTextApi::class)
+    override val preDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit = { _, _, _, _, _ ->
     }
 
     val drawSingleFun: DrawScope.(Duration, Duration, Boolean, Float, Float, Float) -> Unit = { startDiff, endDiff, grabbed, textBuffer, daySize, scroll ->
@@ -154,7 +171,8 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
         }
     }
 
-    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit = { time, grabbed, textBuffer, daySize, scroll ->
+    @OptIn(ExperimentalTextApi::class)
+    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float, TextMeasurer) -> Unit = { time, grabbed, textBuffer, daySize, scroll, _ ->
         if (event.repeat == null) {
             val startDiff = event.time - time
             val endDiff = startDiff + event.duration
@@ -179,16 +197,38 @@ class CalendarEvent(val event: Event, color: Color) : ColorableCalendarObject(co
         }
     }
 
+    @OptIn(ExperimentalTextApi::class)
+    override val postDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit = { time, textBuffer, daySize, scroll, textMeasurer ->
+        val diff = event.time - time
+        if (diff < 7.days && diff >= 0.days) {
+            val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays) + daySize / 2f
+            val dayDiff = diff - diff.inWholeDays.days
+            val y = (dayDiff.inWholeNanoseconds * HOURS_PER_NANO * HOUR_SIZE).dp.toPx() + scroll
+
+            val res = textMeasurer.measure(AnnotatedString(this@CalendarEvent.title), overflow = TextOverflow.Ellipsis, softWrap = false, constraints = Constraints(0, daySize.toInt(), 0, Constraints.Infinity))
+
+            drawText(res, Color.Black, Offset(x - (res.size.width / 2f), y - res.size.height))
+        }
+    }
+
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
         val day = ((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
         val hour = (grabbedOffset + change.y - scroll) / HOUR_SIZE
 
         event.time = time + day.days + (hour * NANOS_PER_HOUR).toLong().nanoseconds
     }
+
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+
+        json.put("generated", generated)
+
+        return json
+    }
 }
 
-class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color) {
-    constructor(task: Task, json: JSONObject) : this(task, Color(json.getLong("color").toULong()))
+class CalendarTask(val task: Task, title: String, description: String, color: Color) : MetaDataCalendarObject(title, description, color) {
+    constructor(task: Task, json: JSONObject) : this(task, json.getString("title"), json.getString("description"), Color(json.getLong("color").toULong()))
 
     override val inBoundsFun: PointerInputScope.(Instant, Offset, Float, Float, Float) -> Float? = { time, offset, textBuffer, daySize, scroll ->
         val diff = task.dueTime - time
@@ -222,7 +262,8 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
         drawPath(path, color, style = Stroke(pathEffect = pathEffect))
     }
 
-    override val preDrawFun: DrawScope.(Instant, Float, Float, Float) -> Unit = { time, textBuffer, daySize, scroll ->
+    @OptIn(ExperimentalTextApi::class)
+    override val preDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit = { time, textBuffer, daySize, scroll, _ ->
         val diff = task.dueTime - time
         if (diff < 7.days && diff >= 0.days) {
             val xFrom = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays) + daySize / 2f
@@ -240,7 +281,7 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
             }
 
             for (requiredTask in task.requirements) {
-                val taskDiff = task.event!!.time - time
+                val taskDiff = requiredTask.dueTime - time
                 if (taskDiff < 7.days) {
                     val taskDayDiff = taskDiff - taskDiff.inWholeDays.days
                     pathTo(this, xFrom, yFrom, taskDiff.inWholeDays, taskDayDiff.inWholeNanoseconds * HOURS_PER_NANO, textBuffer, daySize, scroll, pathEffect)
@@ -249,7 +290,8 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
         }
     }
 
-    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit = { time, grabbed, textBuffer, daySize, scroll ->
+    @OptIn(ExperimentalTextApi::class)
+    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float, TextMeasurer) -> Unit = { time, grabbed, textBuffer, daySize, scroll, _ ->
         val diff = task.dueTime - time
         if (diff < 7.days && diff >= 0.days) {
             val currColor = if (grabbed) {
@@ -271,6 +313,20 @@ class CalendarTask(val task: Task, color: Color) : ColorableCalendarObject(color
         }
     }
 
+    @OptIn(ExperimentalTextApi::class)
+    override val postDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit = { time, textBuffer, daySize, scroll, textMeasurer ->
+        val diff = task.dueTime - time
+        if (diff < 7.days && diff >= 0.days) {
+            val x = textBuffer + ((daySize + DAY_PADDING) * diff.inWholeDays) + daySize / 2f
+            val dayDiff = diff - diff.inWholeDays.days
+            val y = (dayDiff.inWholeNanoseconds * HOURS_PER_NANO * HOUR_SIZE).dp.toPx() + scroll
+
+            val res = textMeasurer.measure(AnnotatedString(this@CalendarTask.title), overflow = TextOverflow.Ellipsis, softWrap = false, constraints = Constraints(0, daySize.toInt(), 0, Constraints.Infinity))
+
+            drawText(res, Color.Black, Offset(x - (res.size.width / 2f), y - res.size.height))
+        }
+    }
+
     override val dragFun: PointerInputScope.(Instant, Offset, Float, Float, Float, Float) -> Unit = { time, change, grabbedOffset, textBuffer, daySize, scroll ->
         val day = ((-textBuffer + change.x) / (daySize + DAY_PADDING) - 0.5f).roundToInt()
         val hour = (grabbedOffset + change.y - scroll) / HOUR_SIZE
@@ -284,11 +340,18 @@ class CalendarDummy : CalendarObject() {
         throw NotImplementedError()
     }
 
-    override val preDrawFun: DrawScope.(Instant, Float, Float, Float) -> Unit = { _, _, _, _ ->
+    @OptIn(ExperimentalTextApi::class)
+    override val preDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit = { _, _, _, _, _ ->
         throw NotImplementedError()
     }
 
-    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float) -> Unit = { _, _, _, _, _ ->
+    @OptIn(ExperimentalTextApi::class)
+    override val drawFun: DrawScope.(Instant, Boolean, Float, Float, Float, TextMeasurer) -> Unit = { _, _, _, _, _, _ ->
+        throw NotImplementedError()
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    override val postDrawFun: DrawScope.(Instant, Float, Float, Float, TextMeasurer) -> Unit = { _, _, _, _, _ ->
         throw NotImplementedError()
     }
 

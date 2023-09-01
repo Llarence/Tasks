@@ -70,6 +70,8 @@ fun LocationPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
 
             Column {
                 Text("Deletes")
+
+                val enabled = locationData.names.size > 1
                 for (name in locationData.names.entries) {
                     Button({
                         locationData.names.remove(name.key)
@@ -80,7 +82,7 @@ fun LocationPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
                         }
 
                         refresh = !refresh
-                    }) {
+                    }, enabled = enabled) {
                         Text("Delete")
                     }
                 }

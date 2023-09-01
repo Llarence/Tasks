@@ -2,6 +2,38 @@ package me.llarence.common
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.nio.charset.Charset
+
+val charset = Charset.defaultCharset()
+
+fun save(file: File) {
+    val json = JSONObject()
+    json.put("CalendarData", toCalendarObjectsJson(calendarObjects + calendarEventsGenerated))
+    json.put("LocationData", locationData.toJson())
+
+    file.writeBytes(json.toString().toByteArray(charset))
+}
+
+fun load(file: File) {
+    println(file.readBytes().toString())
+    val json = JSONObject(file.readBytes().toString(charset))
+
+    calendarObjects.clear()
+    calendarEventsGenerated.clear()
+
+    for (calendarObject in fromCalendarObjectsJson(json.get("CalendarData") as JSONObject)) {
+        if (calendarObject is CalendarEvent) {
+            if (calendarObject.generated) {
+                calendarEventsGenerated.add(calendarObject)
+            }
+        }
+
+        calendarObjects.add(calendarObject)
+    }
+
+    locationData = LocationData(json.get("LocationData") as JSONArray)
+}
 
 fun toCalendarObjectsJson(calendarObjects: List<CalendarObject>): JSONObject {
     val events = mutableListOf<Event>()

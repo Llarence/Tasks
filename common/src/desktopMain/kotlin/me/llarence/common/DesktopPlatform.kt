@@ -1,7 +1,7 @@
 package me.llarence.common
 
 import androidx.compose.ui.unit.dp
-import java.io.File
+import java.nio.file.Path
 
 const val title = "Tasks"
 
@@ -10,17 +10,13 @@ val height = 900.dp
 
 // TODO: Add windows and mac
 // TODO: Add more error handling
-fun createSaveDirectory(): String {
-    val directory = File("~/.local/share/Tasks")
-
+val path: String = run {
+    val directory = Path.of(System.getProperty("user.home"), ".local/share/tasks").toFile()
     if (!directory.exists()) {
-        directory.mkdir()
+        println(directory.mkdir())
     }
-
-    return directory.path
+    directory.path
 }
-
-val path = createSaveDirectory()
 
 actual fun getSavePath(): String {
     return path

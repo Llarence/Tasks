@@ -51,7 +51,7 @@ fun firstTimeAndLocation(task: Task, startTime: Instant, eventsByTime: List<Even
         return null
     }
 
-    var bestLocation: Int? = null
+    var bestLocation = task.locations.random()
 
     for (event in generateEvents(startTime, eventsByTime, repeatedEvents)) {
         // Hate to call the same function twice, but it looks nicer
@@ -80,12 +80,13 @@ fun firstTimeAndLocation(task: Task, startTime: Instant, eventsByTime: List<Even
     return Pair(bestStartTime, bestLocation!!)
 }
 
+// Tasks have to have at least one location
 fun autofillMinTime(currTime: Instant, events: List<Event>, tasks: List<Task>, locationData: LocationData): List<Event> {
     val eventsByTime = events.filter { it.repeat == null }.sortedBy { it.time }
     val repeatedEvents = events.filter { it.repeat != null }
     val newEvents = mutableListOf<Event>()
 
-    val tasksTodoByLength = tasks.filter { it.event == null && it.locations.isNotEmpty() }.toMutableList()
+    val tasksTodoByLength = tasks.filter { it.event == null }.toMutableList()
     tasksTodoByLength.shuffle()
     tasksTodoByLength.sortBy { it.dueTime }
 
