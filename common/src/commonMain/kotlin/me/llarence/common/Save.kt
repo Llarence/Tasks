@@ -9,20 +9,20 @@ val charset = Charset.defaultCharset()
 
 fun save(file: File) {
     val json = JSONObject()
-    json.put("CalendarData", toCalendarObjectsJson(calendarObjects + calendarEventsGenerated))
-    json.put("LocationData", locationData.toJson())
+    json.put("calendar", toCalendarObjectsJson(calendarObjects + calendarEventsGenerated))
+    json.put("location", locationData.toJson())
 
     file.writeBytes(json.toString().toByteArray(charset))
 }
 
 fun load(file: File) {
-    println(file.readBytes().toString())
+    println(file.readBytes().toString(charset))
     val json = JSONObject(file.readBytes().toString(charset))
 
     calendarObjects.clear()
     calendarEventsGenerated.clear()
 
-    for (calendarObject in fromCalendarObjectsJson(json.get("CalendarData") as JSONObject)) {
+    for (calendarObject in fromCalendarObjectsJson(json.getJSONObject("calendar"))) {
         if (calendarObject is CalendarEvent) {
             if (calendarObject.generated) {
                 calendarEventsGenerated.add(calendarObject)
@@ -32,7 +32,7 @@ fun load(file: File) {
         calendarObjects.add(calendarObject)
     }
 
-    locationData = LocationData(json.get("LocationData") as JSONArray)
+    locationData = LocationData(json.getJSONObject("location"))
 }
 
 fun toCalendarObjectsJson(calendarObjects: List<CalendarObject>): JSONObject {
@@ -70,7 +70,7 @@ fun fromCalendarObjectsJson(json: JSONObject): List<CalendarObject> {
     val events = out.first
     val tasks = out.second
 
-    for (calendarObjectJson in json.getJSONArray("calendarObjects")) {
+    for (calendarObjectJson in json.getJSONArray("calendarObjects").loop()) {
         calendarObjectJson as JSONObject
 
         val eventIndex = calendarObjectJson.opt("event")
@@ -139,12 +139,12 @@ fun fromEventsAndTasksJson(json: JSONObject): Pair<List<Event>, List<Task>> {
     val tasks = mutableListOf<Task>()
 
     val eventsJson = json.getJSONArray("events")
-    for (eventJson in eventsJson) {
+    for (eventJson in eventsJson.loop()) {
         events.add(Event(eventJson as JSONObject))
     }
 
     val tasksJson = json.getJSONArray("tasks")
-    for (taskJson in tasksJson) {
+    for (taskJson in tasksJson.loop()) {
         tasks.add(Task(taskJson as JSONObject))
     }
 
@@ -159,11 +159,11 @@ fun fromEventsAndTasksJson(json: JSONObject): Pair<List<Event>, List<Task>> {
         val taskJson = tasksJson.getJSONObject(i)
         val task = tasks[i]
 
-        for (requirementJson in taskJson.getJSONArray("requirements")) {
+        for (requirementJson in taskJson.getJSONArray("requirements").loop()) {
             task.requirements.add(tasks[requirementJson as Int])
         }
 
-        for (requiredFor in taskJson.getJSONArray("requiredFor")) {
+        for (requiredFor in taskJson.getJSONArray("requiredFor").loop()) {
             task.requiredFor.add(tasks[requiredFor as Int])
         }
 

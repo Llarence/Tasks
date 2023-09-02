@@ -9,10 +9,10 @@ import kotlin.time.Duration.Companion.hours
 const val HOURS_IN_DAY = 24
 const val DAYS_IN_WEEK = 7
 
-const val HOUR_SIZE = 60f
-const val DAY_PADDING = 10f
+val HOUR_SIZE = 60.dp
+val DAY_PADDING = 10.dp
 
-const val TEXT_PADDING = 2f
+val TEXT_PADDING = 2.dp
 
 val CORNER_RADIUS = 10.dp
 
@@ -20,9 +20,10 @@ const val DARKEN_PERCENT = 0.8f
 
 val DEFAULT_DURATION = 1.hours
 
+// Maybe make duration
 const val TASK_HOURS = 0.2f
 
-const val SCROLL_SPEED = 0.5f
+val SCROLL_SPEED = 0.5.dp
 
 const val START_HOUR = 8
 

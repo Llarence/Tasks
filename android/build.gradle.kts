@@ -13,21 +13,23 @@ repositories {
 
 dependencies {
     implementation(project(":common"))
-    implementation("androidx.activity:activity-compose:1.5.0")
+    implementation("androidx.activity:activity-compose:1.7.2")
 }
 
 android {
-    compileSdkVersion(33)
+    namespace = "me.llarence.android"
+
+    compileSdk = 34
     defaultConfig {
         applicationId = "me.llarence.android"
-        minSdkVersion(24)
-        targetSdkVersion(33)
+        minSdk = 24
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0-SNAPSHOT"
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_18
+        targetCompatibility = JavaVersion.VERSION_18
     }
     buildTypes {
         getByName("release") {

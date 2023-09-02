@@ -9,12 +9,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.*
+import org.json.JSONArray
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
 val numberOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+
+// org.json in android is different than the import and JSONArray doesn't implement Iterator
+fun JSONArray.loop(): Sequence<Any> {
+    return sequence {
+        for (i in 0 until this@loop.length()) {
+            yield(this@loop.get(i))
+        }
+    }
+}
 
 fun randomColor(): Color {
     return Color(Random.nextBits(8), Random.nextBits(8), Random.nextBits(8))
@@ -137,11 +147,6 @@ fun DurationPicker(duration: Duration, onChange: (Duration) -> Unit): (Duration)
         hours = hoursInt.toString()
         minutes = (it.inWholeMinutes - (hoursInt * MINUTES_PER_HOUR)).toString()
     }
-}
-
-@Composable
-fun LocationPicker(location: Int, locationData: LocationData, onChange: (Instant) -> Unit) {
-
 }
 
 fun calendarObjectsToEventsAndTasks(calendarObjects: List<CalendarObject>): Pair<List<Event>, List<Task>> {

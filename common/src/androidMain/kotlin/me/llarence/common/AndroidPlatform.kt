@@ -1,9 +1,18 @@
 package me.llarence.common
 
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+@SuppressLint("StaticFieldLeak")
+lateinit var context: Context
+
 @Composable
+actual fun init() {
+    context = LocalContext.current
+}
+
 actual fun getSavePath(): String {
-    return LocalContext.current.filesDir.path
+    return context.filesDir.path
 }

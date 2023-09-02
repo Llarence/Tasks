@@ -1,6 +1,3 @@
-import org.jetbrains.compose.compose
-import org.jetbrains.kotlin.ir.backend.js.compile
-
 plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
@@ -22,7 +19,7 @@ kotlin {
                 api(compose.foundation)
                 api(compose.material)
 
-                implementation("androidx.compose.ui:ui-graphics:1.4.3")
+                implementation("androidx.compose.ui:ui-graphics:1.5.0")
 
                 implementation("org.slf4j:slf4j-simple:1.7.30")
 
@@ -38,11 +35,11 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
-                api("androidx.appcompat:appcompat:1.5.1")
-                api("androidx.core:core-ktx:1.9.0")
+                api("androidx.appcompat:appcompat:1.6.1")
+                api("androidx.core:core-ktx:1.10.1")
             }
         }
-        val androidTest by getting {
+        val androidInstrumentedTest by getting {
             dependencies {
                 implementation("junit:junit:4.13.2")
             }
@@ -57,14 +54,15 @@ kotlin {
 }
 
 android {
-    compileSdkVersion(33)
+    namespace = "me.llarence.android"
+
+    compileSdk = 34
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdkVersion(24)
-        targetSdkVersion(33)
+        minSdk = 24
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 }

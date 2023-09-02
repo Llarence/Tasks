@@ -77,7 +77,7 @@ fun firstTimeAndLocation(task: Task, startTime: Instant, eventsByTime: List<Even
         }
     }
 
-    return Pair(bestStartTime, bestLocation!!)
+    return Pair(bestStartTime, bestLocation)
 }
 
 // Tasks have to have at least one location

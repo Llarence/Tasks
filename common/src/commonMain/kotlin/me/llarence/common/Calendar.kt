@@ -15,11 +15,12 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
+import androidx.compose.ui.unit.min
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.max
-import kotlin.math.min
 
 operator fun Color.times(value: Float): Color {
     return Color(red * value, green * value, blue * value)
@@ -61,14 +62,14 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
         .scrollable(
             orientation = Orientation.Vertical,
             state = rememberScrollableState { delta ->
-                scroll += delta * SCROLL_SPEED
+                scroll += SCROLL_SPEED * delta
                 delta
             }
         )
         .pointerInput(Unit) {
             detectDragGestures { change, dragAmount ->
                 change.consume()
-                scroll += dragAmount.y
+                scroll += (dragAmount.y / density).dp
             }
         }
         .pointerInput(Unit) {
@@ -130,7 +131,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
                     change.consume()
 
                     if (!dragging) {
-                        scroll += dragAmount.y
+                        scroll += (dragAmount.y / density).dp
                     } else {
                         val calendarObject = calendarObjects.last()
                         calendarObject.drag(this, weekInstant, change.position, dragOffset, textBuffer, daySize, scroll)
@@ -151,11 +152,11 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
             if (i == 0) {
                 // Maybe having scroll changed here doesn't make a lot of sense
                 val textMeasure = textMeasurer.measure(AnnotatedString(text))
-                scroll = min(max(scroll, -(HOURS_IN_DAY * HOUR_SIZE).dp.toPx() + size.height), textMeasure.size.height / 2f)
+                scroll = min(max(scroll, (size.height / density).dp - (HOUR_SIZE * HOURS_IN_DAY)), (textMeasure.size.height / density).dp / 2f)
             }
 
             val textMeasure = textMeasurer.measure(AnnotatedString(text))
-            val y = (HOUR_SIZE * i).dp.toPx() - textMeasure.size.height / 2f + scroll
+            val y = (HOUR_SIZE * i).toPx() - textMeasure.size.height / 2f + scroll.toPx()
             if (size.height > y) {
                 drawText(textMeasure, topLeft = Offset(0f, y))
             }
@@ -165,16 +166,17 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
             }
         }
 
-        textBuffer = textWidth + TEXT_PADDING
-        daySize = max((size.width + DAY_PADDING - textBuffer) / DAYS_IN_WEEK - DAY_PADDING, 0f)
+        val dayPadding = DAY_PADDING.toPx()
+        textBuffer = textWidth + TEXT_PADDING.toPx()
+        daySize = max((size.width + dayPadding - textBuffer) / DAYS_IN_WEEK - dayPadding, 0f)
 
         for (i in 0 until DAYS_IN_WEEK) {
-            val startX = textBuffer + ((daySize + DAY_PADDING) * i)
-            drawRect(Color.LightGray, Offset(startX.dp.toPx(), scroll), Size(daySize.dp.toPx(), (HOURS_IN_DAY * HOUR_SIZE).dp.toPx()))
+            val startX = textBuffer + ((daySize + dayPadding) * i)
+            drawRect(Color.LightGray, Offset(startX, scroll.toPx()), Size(daySize, (HOUR_SIZE * HOURS_IN_DAY).toPx()))
         }
 
         for (i in 0 until HOURS_IN_DAY) {
-            val y = (HOUR_SIZE * i).dp.toPx() + scroll
+            val y = (HOUR_SIZE * i).toPx() + scroll.toPx()
             drawLine(Color.Gray, Offset(textBuffer, y), Offset(size.width, y))
         }
 

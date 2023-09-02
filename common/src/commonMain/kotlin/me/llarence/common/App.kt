@@ -29,6 +29,8 @@ var locationData = LocationData().apply {
 fun app() {
     val state by stateDelegate
 
+    init()
+
     when (state) {
         MAIN_STATE -> MainPage(stateDelegate, calendarObjects, calendarEventsGenerated, locationData, calendarTimeState, timeZone)
         LOCATION_STATE -> LocationPage (stateDelegate, locationData)
