@@ -2,6 +2,8 @@ package me.llarence.common
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.contentColorFor
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
@@ -55,6 +57,12 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
     if (date.nanosecond != 0 || date.second != 0 || date.minute != 0 || date.hour != 0) {
         throw IllegalArgumentException()
     }
+
+    val background = MaterialTheme.colors.background
+    val main = MaterialTheme.colors.secondary
+    val line = MaterialTheme.colors.background
+    val timeTextStyle = MaterialTheme.typography.subtitle1.copy(MaterialTheme.colors.contentColorFor(background))
+    val objectTextStyle = MaterialTheme.typography.subtitle2.copy(MaterialTheme.colors.contentColorFor(main))
 
     Canvas(
         modifier
@@ -143,7 +151,7 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
             )
         }
     ) {
-        drawRect(Color.Cyan)
+        drawRect(background)
 
         var textWidth = 0
         for (i in 0 until HOURS_IN_DAY) {
@@ -151,11 +159,11 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
 
             if (i == 0) {
                 // Maybe having scroll changed here doesn't make a lot of sense
-                val textMeasure = textMeasurer.measure(AnnotatedString(text))
+                val textMeasure = textMeasurer.measure(AnnotatedString(text), timeTextStyle)
                 scroll = min(max(scroll, (size.height / density).dp - (HOUR_SIZE * HOURS_IN_DAY)), (textMeasure.size.height / density).dp / 2f)
             }
 
-            val textMeasure = textMeasurer.measure(AnnotatedString(text))
+            val textMeasure = textMeasurer.measure(AnnotatedString(text), timeTextStyle)
             val y = (HOUR_SIZE * i).toPx() - textMeasure.size.height / 2f + scroll.toPx()
             if (size.height > y) {
                 drawText(textMeasure, topLeft = Offset(0f, y))
@@ -172,36 +180,36 @@ fun RenderedCalendar(calendarObjects: SnapshotStateList<CalendarObject>, calenda
 
         for (i in 0 until DAYS_IN_WEEK) {
             val startX = textBuffer + ((daySize + dayPadding) * i)
-            drawRect(Color.LightGray, Offset(startX, scroll.toPx()), Size(daySize, (HOUR_SIZE * HOURS_IN_DAY).toPx()))
+            drawRect(main, Offset(startX, scroll.toPx()), Size(daySize, (HOUR_SIZE * HOURS_IN_DAY).toPx()))
         }
 
         for (i in 0 until HOURS_IN_DAY) {
             val y = (HOUR_SIZE * i).toPx() + scroll.toPx()
-            drawLine(Color.Gray, Offset(textBuffer, y), Offset(size.width, y))
+            drawLine(line, Offset(textBuffer, y), Offset(size.width, y))
         }
 
         for (i in calendarEventsGenerated.indices) {
-            calendarEventsGenerated[i].preDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer)
+            calendarEventsGenerated[i].preDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer, objectTextStyle)
         }
 
         for (i in calendarObjects.indices) {
-            calendarObjects[i].preDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer)
+            calendarObjects[i].preDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer, objectTextStyle)
         }
 
         for (i in calendarEventsGenerated.indices) {
-            calendarEventsGenerated[i].draw(this, weekInstant, false, textBuffer, daySize, scroll, textMeasurer)
+            calendarEventsGenerated[i].draw(this, weekInstant, false, textBuffer, daySize, scroll, textMeasurer, objectTextStyle)
         }
 
         for (i in calendarObjects.indices) {
-            calendarObjects[i].draw(this, weekInstant, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll, textMeasurer)
+            calendarObjects[i].draw(this, weekInstant, dragging && i == calendarObjects.size - 1, textBuffer, daySize, scroll, textMeasurer, objectTextStyle)
         }
 
         for (i in calendarEventsGenerated.indices) {
-            calendarEventsGenerated[i].postDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer)
+            calendarEventsGenerated[i].postDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer, objectTextStyle)
         }
 
         for (i in calendarObjects.indices) {
-            calendarObjects[i].postDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer)
+            calendarObjects[i].postDraw(this, weekInstant, textBuffer, daySize, scroll, textMeasurer, objectTextStyle)
         }
     }
 }

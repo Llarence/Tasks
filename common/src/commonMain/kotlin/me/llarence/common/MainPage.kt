@@ -8,6 +8,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.*
 import java.io.IOException
@@ -22,7 +23,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
     var taskUpdateFun by remember { mutableStateOf<(CalendarObject) -> Unit>({  }) }
 
     Row {
-        Column(Modifier.width(200.dp)) {
+        Column(Modifier.width(SIDEPANEL_SIZE)) {
             Button({
                 if (locationData.names.isNotEmpty()) {
                     calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), null, DEFAULT_DURATION, locationData.names.keys.random(), null), false, "", "", randomColor()))
@@ -49,12 +50,12 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                 TextField(last.title, {
                     last.title = it
                     calendarObjects.forceUpdateList()
-                })
+                }, textStyle = TextStyle(MaterialTheme.colors.onBackground), singleLine = true)
 
                 TextField(last.description, {
                     last.description = it
                     calendarObjects.forceUpdateList()
-                })
+                }, textStyle = TextStyle(MaterialTheme.colors.onBackground))
 
                 ColorPicker(last.color) {
                     last.color = it
@@ -285,7 +286,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                 var filename by remember { mutableStateOf("") }
                 TextField(filename, {
                     filename = it
-                })
+                }, textStyle = TextStyle(MaterialTheme.colors.onBackground))
 
                 Button({
                     val file = try {

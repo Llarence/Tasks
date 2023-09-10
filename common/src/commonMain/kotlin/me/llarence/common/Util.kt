@@ -6,6 +6,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.*
@@ -27,6 +28,7 @@ fun JSONArray.loop(): Sequence<Any> {
 }
 
 fun randomColor(): Color {
+    // TODO: Just have one random of 24 bits
     return Color(Random.nextBits(8), Random.nextBits(8), Random.nextBits(8))
 }
 
@@ -83,26 +85,26 @@ fun DatetimePicker(datetime: LocalDateTime, onChange: (LocalDateTime) -> Unit): 
             TextField(day, {
                 day = it
                 tryGenerateDatetime()
-            }, Modifier.width(50.dp), keyboardOptions = numberOptions)
+            }, modifier = Modifier.weight(1f), textStyle = TextStyle(MaterialTheme.colors.onBackground), keyboardOptions = numberOptions, singleLine = true)
             TextField(month, {
                 month = it
                 tryGenerateDatetime()
-            }, Modifier.width(50.dp), keyboardOptions = numberOptions)
+            }, modifier = Modifier.weight(1f), textStyle = TextStyle(MaterialTheme.colors.onBackground), keyboardOptions = numberOptions, singleLine = true)
             TextField(year, {
                 year = it
                 tryGenerateDatetime()
-            }, Modifier.width(100.dp), keyboardOptions = numberOptions)
+            }, modifier = Modifier.weight(2f), textStyle = TextStyle(MaterialTheme.colors.onBackground), keyboardOptions = numberOptions, singleLine = true)
         }
 
         Row {
             TextField(hour, {
                 hour = it
                 tryGenerateDatetime()
-            }, Modifier.width(50.dp), keyboardOptions = numberOptions)
+            }, modifier = Modifier.weight(1f), textStyle = TextStyle(MaterialTheme.colors.onBackground), keyboardOptions = numberOptions, singleLine = true)
             TextField(minute, {
                 minute = it
                 tryGenerateDatetime()
-            }, Modifier.width(50.dp), keyboardOptions = numberOptions)
+            }, modifier = Modifier.weight(1f), textStyle = TextStyle(MaterialTheme.colors.onBackground), keyboardOptions = numberOptions, singleLine = true)
         }
     }
 
@@ -116,7 +118,7 @@ fun DatetimePicker(datetime: LocalDateTime, onChange: (LocalDateTime) -> Unit): 
 }
 
 @Composable
-fun DurationPicker(duration: Duration, onChange: (Duration) -> Unit): (Duration) -> Unit {
+fun DurationPicker(duration: Duration, modifier: Modifier = Modifier, onChange: (Duration) -> Unit): (Duration) -> Unit {
     var hours by remember { mutableStateOf(duration.inWholeHours.toString()) }
     var minutes by remember { mutableStateOf((duration.inWholeMinutes - (duration.inWholeHours * MINUTES_PER_HOUR)).toString()) }
 
@@ -131,15 +133,15 @@ fun DurationPicker(duration: Duration, onChange: (Duration) -> Unit): (Duration)
         }
     }
 
-    Row {
+    Row(modifier) {
         TextField(hours, {
             hours = it
             tryGenerateDatetime()
-        }, Modifier.width(50.dp), keyboardOptions = numberOptions)
+        }, modifier = Modifier.weight(1f), textStyle = TextStyle(MaterialTheme.colors.onBackground), keyboardOptions = numberOptions, singleLine = true)
         TextField(minutes, {
             minutes = it
             tryGenerateDatetime()
-        }, Modifier.width(50.dp), keyboardOptions = numberOptions)
+        }, modifier = Modifier.weight(1f), textStyle = TextStyle(MaterialTheme.colors.onBackground), keyboardOptions = numberOptions, singleLine = true)
     }
 
     return {

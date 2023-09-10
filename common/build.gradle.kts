@@ -19,13 +19,13 @@ kotlin {
                 api(compose.foundation)
                 api(compose.material)
 
-                implementation("androidx.compose.ui:ui-graphics:1.5.0")
+                implementation("androidx.compose.ui:ui-graphics:1.4.1")
 
                 implementation("org.slf4j:slf4j-simple:1.7.30")
 
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.3.1")
 
-                implementation("org.json:json:20230227")
+                implementation("androidx.compose.material3:material3:1.1.1")
             }
         }
         val commonTest by getting {
@@ -47,6 +47,8 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 api(compose.preview)
+
+                implementation("org.json:json:20230227")
             }
         }
         val desktopTest by getting

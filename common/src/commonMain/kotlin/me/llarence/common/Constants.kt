@@ -40,3 +40,5 @@ val DEFAULT_REPEAT = 1.days
 
 const val MAIN_STATE = 0
 const val LOCATION_STATE = 1
+
+val SIDEPANEL_SIZE = 200.dp
