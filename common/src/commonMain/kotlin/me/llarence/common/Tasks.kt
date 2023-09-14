@@ -67,7 +67,7 @@ class LocationData() {
 // Json doesn't include task
 // Earlier locations are prioritised
 class Event(var time: Instant, var repeat: Duration?, var duration: Duration, var location: Int, var task: Task?) {
-    constructor(jsonWithoutTask: JSONObject) : this(Instant.parse(jsonWithoutTask.getString("time")), (jsonWithoutTask.optLong("repeat") as Long?)?.nanoseconds, jsonWithoutTask.getLong("duration").nanoseconds, jsonWithoutTask.getInt("location"), null)
+    constructor(jsonWithoutTask: JSONObject) : this(Instant.parse(jsonWithoutTask.getString("time")), (jsonWithoutTask.opt("repeat") as Long?)?.nanoseconds, jsonWithoutTask.getLong("duration").nanoseconds, jsonWithoutTask.getInt("location"), null)
 
     fun toJsonWithoutTask(): JSONObject {
         val json = JSONObject()

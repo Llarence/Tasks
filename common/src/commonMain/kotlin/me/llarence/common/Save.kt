@@ -16,7 +16,6 @@ fun save(file: File) {
 }
 
 fun load(file: File) {
-    println(file.readBytes().toString(charset))
     val json = JSONObject(file.readBytes().toString(charset))
 
     calendarObjects.clear()
