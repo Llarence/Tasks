@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+// I hope this is not a problem
 @SuppressLint("StaticFieldLeak")
 lateinit var context: Context
 

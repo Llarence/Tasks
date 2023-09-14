@@ -5,7 +5,7 @@ import org.json.JSONObject
 import java.io.File
 import java.nio.charset.Charset
 
-val charset = Charset.defaultCharset()
+val charset: Charset = Charset.defaultCharset()
 
 fun save(file: File) {
     val json = JSONObject()

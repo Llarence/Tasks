@@ -19,7 +19,7 @@ fun LocationPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
         Button({
             state = MAIN_STATE
         }) {
-            Text("Back")
+            Text("Back", overflow = TextOverflow.Ellipsis, softWrap = false)
         }
 
         Button({
@@ -41,14 +41,14 @@ fun LocationPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
             locationData.names[newLocation] = ""
             refresh = !refresh
         }) {
-            Text("New")
+            Text("New", overflow = TextOverflow.Ellipsis, softWrap = false)
         }
 
         Row(Modifier.fillMaxSize()) {
             refresh
 
             Column {
-                Text("Deletes", color = MaterialTheme.colors.contentColorFor(MaterialTheme.colors.background))
+                Text("Deletes", color = MaterialTheme.colors.contentColorFor(MaterialTheme.colors.background), overflow = TextOverflow.Ellipsis, softWrap = false)
 
                 val enabled = locationData.names.size > 1
                 for (name in locationData.names.entries) {
@@ -62,13 +62,13 @@ fun LocationPage(stateDelegate: MutableState<Int>, locationData: LocationData) {
 
                         refresh = !refresh
                     }, enabled = enabled) {
-                        Text("Delete")
+                        Text("Delete", overflow = TextOverflow.Ellipsis, softWrap = false)
                     }
                 }
             }
 
             Column(Modifier.weight(1f)) {
-                Text("Names", color = MaterialTheme.colors.onBackground)
+                Text("Names", color = MaterialTheme.colors.onBackground, overflow = TextOverflow.Ellipsis, softWrap = false)
                 for (name in locationData.names.entries) {
                     TextField(name.value, {
                         locationData.names[name.key] = it

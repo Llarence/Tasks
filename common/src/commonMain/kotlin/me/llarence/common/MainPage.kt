@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.*
 import java.io.IOException
@@ -29,19 +30,19 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                     calendarObjects.add(0, CalendarEvent(Event(Clock.System.now(), null, DEFAULT_DURATION, locationData.names.keys.random(), null), false, "", "", randomColor()))
                 }
             }) {
-                Text("New Event")
+                Text("New Event", overflow = TextOverflow.Ellipsis, softWrap = false)
             }
 
             Button({
                 calendarObjects.add(0, CalendarTask(Task(DEFAULT_DURATION, mutableListOf(locationData.names.keys.random()), mutableListOf(), mutableListOf(), Clock.System.now(), null), "", "", randomColor()))
             }) {
-                Text("New Task")
+                Text("New Task", overflow = TextOverflow.Ellipsis, softWrap = false)
             }
 
             Button({
                 state = LOCATION_STATE
             }) {
-                Text("Pick Locations")
+                Text("Pick Locations", overflow = TextOverflow.Ellipsis, softWrap = false)
             }
 
             val last = calendarObjects.lastOrNull()
@@ -103,7 +104,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                 var expanded by remember { mutableStateOf(false) }
 
                 Button({ expanded = !expanded }) {
-                    Text(locationData.names[last.event.location]!!)
+                    Text(locationData.names[last.event.location]!!, overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
 
                 DropdownMenu(expanded, { expanded = false }) {
@@ -115,7 +116,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
 
                                 expanded = false
                             }) {
-                                Text(name.value)
+                                Text(name.value, overflow = TextOverflow.Ellipsis, softWrap = false)
                             }
                         }
                     }
@@ -174,7 +175,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                     for (i in last.task.locations.indices) {
                         val location = last.task.locations[i]
                         Row {
-                            Text(locationData.names[location]!!)
+                            Text(locationData.names[location]!!, overflow = TextOverflow.Ellipsis, softWrap = false)
                             Button({
                                 last.task.locations.removeAt(i)
                                 calendarObjects.forceUpdateList()
@@ -186,7 +187,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                 }
 
                 Button({ expanded = !expanded }) {
-                    Text("Add Location")
+                    Text("Add Location", overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
 
                 DropdownMenu(expanded, { expanded = false }) {
@@ -198,7 +199,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
 
                                 expanded = false
                             }) {
-                                Text(name.value)
+                                Text(name.value, overflow = TextOverflow.Ellipsis, softWrap = false)
                             }
                         }
                     }
@@ -261,7 +262,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
 
                     calendarObjects.forceUpdateList()
                 }) {
-                    Text("Delete")
+                    Text("Delete", overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
             }
         }
@@ -274,13 +275,13 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                 Button({
                     calendarTime -= 7.days
                 }) {
-                    Text("Previous Week")
+                    Text("Previous Week", overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
 
                 Button({
                     calendarTime += 7.days
                 }) {
-                    Text("Next Week")
+                    Text("Next Week", overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
 
                 var filename by remember { mutableStateOf("") }
@@ -299,7 +300,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                         save(file)
                     }
                 }) {
-                    Text("Save")
+                    Text("Save", overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
 
                 Button({
@@ -313,7 +314,7 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                         load(file)
                     }
                 }) {
-                    Text("Load")
+                    Text("Load", overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
 
                 Button({
@@ -328,11 +329,11 @@ fun MainPage(stateDelegate: MutableState<Int>, calendarObjects: SnapshotStateLis
                         calendarEventsGenerated.add(CalendarEvent(event, true, "", "", randomColor()))
                     }
                 }) {
-                    Text("Auto Fill")
+                    Text("Auto Fill", overflow = TextOverflow.Ellipsis, softWrap = false)
                 }
 
                 val calendarDatetime = calendarTime.toLocalDateTime(timeZone)
-                Text("${calendarDatetime.month} ${calendarDatetime.dayOfMonth}, ${calendarDatetime.year}")
+                Text("${calendarDatetime.month} ${calendarDatetime.dayOfMonth}, ${calendarDatetime.year}", overflow = TextOverflow.Ellipsis, softWrap = false)
             }
 
             RenderedCalendar(calendarObjects, calendarEventsGenerated, calendarTimeState, timeZone, {
